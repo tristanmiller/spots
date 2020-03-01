@@ -14,3 +14,22 @@
 
 //// also we can include air in the model - it can creep into an element from neighbouring elements, creating sub-elements as it does
 //// normally each type of fluid will block each other but there's a tuneable threshold for pass-through e.g. if the right conditions are met, fluids can flow past each other (bubbling)
+
+
+//CALCULATIONS
+
+/// Momentum
+
+//// dp_hydraulic = (1D vector sum of pressure-derived forces)*dt
+//// dp_grav = -dt*mg*dHeight)/(length of pipe element)
+//// dp_friction = -dt*v^2*(length of pipe element)/(diameter of pipe element)
+
+//// dp = dp_hydraulic + dp_grav + dp_friction
+//// p = p + dp
+
+/// Mass flow
+
+// m_out = v*A*dt*rho
+//  m_in = whatever is calculated from neighbouring elements
+
+// P = some function of density
