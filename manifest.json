@@ -1,0 +1,22 @@
+{
+	"name": "Simple Pump Operation Training Sim",
+	"short_name": "SPOTS",
+	"display": "standalone",
+	"scope": "../spots",
+	"start_url": "index.html",
+	"theme_color": "#EE0000",
+	"background_color": "#772222",
+	"icons": [
+		{
+			"src": "images/icon_192.png",
+			"sizes": "192x192",
+			"type": "image/png"
+		},
+		{
+			"src": "images/icon_512.png",
+			"sizes": "512x512",
+			"type": "image/png"
+		}
+
+	]
+}
