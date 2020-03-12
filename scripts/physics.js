@@ -63,8 +63,10 @@
 //// elements it is connected to
 
 const K_W = 2.2e9; // Pa
-const RHO_W = 1.0; // g/cm^3
+const RHO_W = 997; // kg/m^3
 const PR_W = 1e5; // Pa
+const TIME_STEP = 0.001; // seconds
+
 
 function newDensityFromPressure (pr, pr_ref, rho_ref, K) {
   let rho_new = rho_ref/(1 - (pr - pr_ref)/K);
@@ -77,28 +79,145 @@ function newPressureFromDensity (rho, rho_ref, pr_ref, K) {
 }
 
 function findElementMass (elm) {
-  let mass = elm.rho*Math.PI*Math.pow(0.5*elm.d/10, 2)*elm.l/10;
+  let mass = elm.rho*Math.PI*Math.pow(0.5*elm.diameter, 2)*elm.elm_length;
   return mass;
 }
 
-let elm1 = {
-  d: 64, // mm
-  l: 100, // mm
-  pr: 1e6, //Pa
+function findCrossSectionalArea (elm) {
+  let area = Math.PI*Math.pow(0.5*elm.diameter, 2);
+  return area;
 }
 
-elm1.rho = newDensityFromPressure(elm1.pr, PR_W, RHO_W, K_W);
-elm1.m = findElementMass(elm1);
+function calculatePressureForces (elm) {
+  let forces = [0, 0];
+  for (let i = 0, l = elm.neighbours.length; i < l; i++) {
+    let sign = 1;
+    if (i == 1) {sign = -1;}
+    if (elm.neighbours[i]) {
+        let neighbour = elm.neighbours[i];
+        if (neighbour.type == 'simple') {
+          forces[i] = sign*(neighbour.pressure - elm.pressure)*Math.min(elm.area, neighbour.area);
+        }
+    } else {
+      console.log('no neighbour on ' + i + ' side');
+      forces[i] += 0;
+    }
+  }
+  return forces;
+}
 
-console.log(elm1);
+function calculateOutflow (elm, momentum) {
+  let massFlow = 0;
+  if (elm.mass > 0) {
+    let velocity = momentum/(elm.mass/2); // since we're dealing with only half of an element (left or right side)
+    massFlow = velocity*TIME_STEP*elm.area;
+  } else {
+    massFlow = 0;
+  }
+  return massFlow;
+}
+
+function packageOutflows (elm) {
+  for (let i = 0, l = elm.neighbours.length; i < l; i++) {
+    let massFlow = calculateOutflow(elm, elm.momentum[i]);
+    if ((i == 0 && massFlow < 0) || (i == 1 && massFlow > 0)) {
+      // add to this element's outflow list.
+      elm.outflows[i] = {mass: massFlow, momentum: elm.momentum[i]*massFlow/(elm.mass/2)};
+      elm.neighbours[i].inflows[(i - 1)*(i - 1)] = {mass: massFlow, momentum: elm.momentum[i]*massFlow/(elm.mass/2)};
+      // add to the neighbour element's inflow list.
+    }
+  }
+}
+
+let elm1 = {
+  diameter: 0.064, // m
+  elm_length: 0.1, // m
+  pressure: 1e5, //Pa
+  type: 'simple',
+  angle: 0, //radians, relative to positive x-direction
+  neighbours: ["",""],
+  momentum: [0, 0],
+  outflows: ["",""],
+  inflows: ["",""],
+}
+
+elm1.rho = newDensityFromPressure(elm1.pressure, PR_W, RHO_W, K_W);
+elm1.mass = findElementMass(elm1);
+elm1.area = findCrossSectionalArea(elm1);
+
 
 let elm2 = {
-  d: 64, // mm
-  l: 100, // mm
-  rho: 3, // g/cm^3
+  diameter: 0.064, // m
+  elm_length: 0.100, // m
+  pressure: 1.1e5, //Pa
+  type: 'simple',
+  angle: 0,
+  neighbours: ["",""],
+  momentum: [0, 0],
+  outflows: ["",""],
+  inflows: ["",""],
 }
 
-elm2.m = findElementMass(elm2);
-elm2.pr = newPressureFromDensity(elm2.rho, RHO_W, PR_W, K_W);
 
+elm2.rho = newDensityFromPressure(elm2.pressure, PR_W, RHO_W, K_W);
+elm2.mass = findElementMass(elm2);
+elm2.area = findCrossSectionalArea(elm2);
+
+let elm3 = {
+  diameter: 0.064, // m
+  elm_length: 0.100, // m
+  pressure: 1.3e5, //Pa
+  type: 'simple',
+  angle: 0,
+  neighbours: ["",""],
+  momentum: [0, 0],
+  outflows: ["",""],
+  inflows: ["",""],
+}
+
+elm3.rho = newDensityFromPressure(elm3.pressure, PR_W, RHO_W, K_W);
+
+elm3.mass = findElementMass(elm3);
+elm3.area = findCrossSectionalArea(elm3);
+
+
+elm1.neighbours[1] = elm2;
+elm2.neighbours[0] = elm1;
+elm2.neighbours[1] = elm3;
+elm3.neighbours[0] = elm2;
+
+console.log(elm1);
 console.log(elm2);
+
+let f1 = calculatePressureForces(elm1);
+elm1.momentum[0] += f1[0]*TIME_STEP;
+elm1.momentum[1] += f1[1]*TIME_STEP;
+let f2 = calculatePressureForces(elm2);
+elm2.momentum[0] += f2[0]*TIME_STEP;
+elm2.momentum[1] += f2[1]*TIME_STEP;
+let f3 = calculatePressureForces(elm3);
+elm3.momentum[0] += f3[0]*TIME_STEP;
+elm3.momentum[1] += f3[1]*TIME_STEP;
+console.log(f1, f2, f3);
+console.log(elm1.momentum, elm2.momentum, elm3.momentum);
+
+packageOutflows(elm1);
+packageOutflows(elm2);
+packageOutflows(elm3);
+
+console.log(elm1);
+console.log(elm2);
+console.log(elm3);
+
+// now do mass transfers
+// if there's an inflow, it temporarily needs to retain its origin so that resultant momentum can be determined
+// outflows deplete the momentum of the original element by shipping mass to the next element
+// need outflow left and outflow right (to deal with bi-directional flow from a single element, e.g. a single point of high pressure in a static pipe)
+
+
+//for each element
+//there are flows for left and right side.
+// if left flow is -ve, then it's an outflow.
+// if right flow is +ve, then it's an outflow.
+// calculate what the mass of these flows are
+// then put them on the 'inflows' list for the neighbouring elements
