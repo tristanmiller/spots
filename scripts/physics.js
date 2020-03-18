@@ -105,7 +105,7 @@ function calculatePressureForces (elm) {
           forces[i] = sign*(neighbour.pressure - elm.pressure)*Math.min(elm.area, neighbour.area);
         }
     } else {
-      console.log('no neighbour on ' + i + ' side');
+      // console.log('no neighbour on ' + i + ' side');
       forces[i] += 0;
     }
   }
@@ -129,8 +129,10 @@ function packageOutflows (elm) {
     if ((i == 0 && elm.momentum[i] < 0) || (i == 1 && elm.momentum[i] > 0)) {
       // add to this element's outflow list.
       elm.outflows[i] = {mass: massFlow, momentum: elm.momentum[i]*massFlow/(elm.mass/2)};
-      elm.neighbours[i].inflows[(i - 1)*(i - 1)] = {mass: massFlow, momentum: elm.momentum[i]*massFlow/(elm.mass/2)};
+      if (elm.neighbours[i]) {
+        elm.neighbours[i].inflows[(i - 1)*(i - 1)] = {mass: massFlow, momentum: elm.momentum[i]*massFlow/(elm.mass/2)};
       // add to the neighbour element's inflow list.
+      }
     }
   }
 }
@@ -150,7 +152,7 @@ function resolveMassFlows (elm) {
     elm.outflows[i] = "";
 
   }
-
+  // also learn arrow notation, pls
   function adder(total, a) {return total + a;};
   let avgMomentum = elm.momentum.reduce(adder)/elm.momentum.length;
   //distribute this to each 'side' of the element
@@ -197,7 +199,7 @@ elm2.volume = findElementVolume(elm1);
 let elm3 = {
   diameter: 0.064, // m
   elm_length: 0.100, // m
-  pressure: 1.3e5, //Pa
+  pressure: 1.0e5, //Pa
   type: 'simple',
   angle: 0,
   neighbours: ["",""],
@@ -217,8 +219,8 @@ elm2.neighbours[0] = elm1;
 elm2.neighbours[1] = elm3;
 elm3.neighbours[0] = elm2;
 
-
-
+for (let j = 0; j < 100; j++) {
+console.log(j);
 let f1 = calculatePressureForces(elm1);
 elm1.momentum[0] += f1[0]*TIME_STEP;
 elm1.momentum[1] += f1[1]*TIME_STEP;
@@ -228,17 +230,16 @@ elm2.momentum[1] += f2[1]*TIME_STEP;
 let f3 = calculatePressureForces(elm3);
 elm3.momentum[0] += f3[0]*TIME_STEP;
 elm3.momentum[1] += f3[1]*TIME_STEP;
-console.log(f1, f2, f3);
-console.log(elm1.momentum, elm2.momentum, elm3.momentum);
+// console.log(f1, f2, f3);
+// console.log(elm1.momentum, elm2.momentum, elm3.momentum);
 
 packageOutflows(elm1);
 packageOutflows(elm2);
 packageOutflows(elm3);
 
-console.log(elm1.outflows, elm1.inflows);
-console.log(elm2.outflows, elm2.inflows);
-console.log(elm3.outflows, elm3.inflows);
-
+console.log(elm1.outflows[0], elm1.outflows[1]);
+console.log(elm2.outflows[0], elm2.outflows[1]);
+console.log(elm3.outflows[0], elm3.outflows[1]);
 
 
 resolveMassFlows(elm1);
@@ -246,11 +247,18 @@ resolveMassFlows(elm2);
 resolveMassFlows(elm3);
 
 
-total_mass = elm1.mass + elm2.mass + elm3.mass;
-total_momentum = elm1.momentum[0] + elm1.momentum[1] + elm2.momentum[0] + elm2.momentum[1] + elm3.momentum[0] + elm3.momentum[1];
+let total_mass = elm1.mass + elm2.mass + elm3.mass;
+let total_momentum = elm1.momentum[0] + elm1.momentum[1] + elm2.momentum[0] + elm2.momentum[1] + elm3.momentum[0] + elm3.momentum[1];
 console.log("Mass, momentum: " + total_mass, total_momentum);
 
 // recalculate densities, pressures, ready for the next cycle!
 elm1.rho = elm1.mass/elm1.volume;
 elm2.rho = elm2.mass/elm2.volume;
 elm3.rho = elm3.mass/elm3.volume;
+
+elm1.pressure = newPressureFromDensity(elm1.rho, RHO_W, PR_W, K_W);
+elm2.pressure = newPressureFromDensity(elm2.rho, RHO_W, PR_W, K_W);
+elm3.pressure = newPressureFromDensity(elm3.rho, RHO_W, PR_W, K_W);
+
+console.log(elm1.pressure, elm2.pressure, elm3.pressure);
+}
