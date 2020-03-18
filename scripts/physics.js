@@ -125,11 +125,12 @@ function calculateOutflow (elm, momentum) {
 
 function packageOutflows (elm) {
   for (let i = 0, l = elm.neighbours.length; i < l; i++) {
-    let massFlow = calculateOutflow(elm, elm.momentum[i]);
-    if ((i == 0 && elm.momentum[i] < 0) || (i == 1 && elm.momentum[i] > 0)) {
+    if (elm.neighbours[i]) { // if there's somewhere for the flow to go...
+      let massFlow = calculateOutflow(elm, elm.momentum[i]);
+      if ((i == 0 && elm.momentum[i] < 0) || (i == 1 && elm.momentum[i] > 0)) {
       // add to this element's outflow list.
-      elm.outflows[i] = {mass: massFlow, momentum: elm.momentum[i]*massFlow/(elm.mass/2)};
-      if (elm.neighbours[i]) {
+
+        elm.outflows[i] = {mass: massFlow, momentum: elm.momentum[i]*massFlow/(elm.mass/2)};
         elm.neighbours[i].inflows[(i - 1)*(i - 1)] = {mass: massFlow, momentum: elm.momentum[i]*massFlow/(elm.mass/2)};
       // add to the neighbour element's inflow list.
       }
@@ -181,7 +182,7 @@ elm1.volume = findElementVolume(elm1);
 let elm2 = {
   diameter: 0.064, // m
   elm_length: 0.100, // m
-  pressure: 1.1e5, //Pa
+  pressure: 1.0e5, //Pa
   type: 'simple',
   angle: 0,
   neighbours: ["",""],
@@ -199,7 +200,7 @@ elm2.volume = findElementVolume(elm1);
 let elm3 = {
   diameter: 0.064, // m
   elm_length: 0.100, // m
-  pressure: 1.0e5, //Pa
+  pressure: 1.0e6, //Pa
   type: 'simple',
   angle: 0,
   neighbours: ["",""],
@@ -237,9 +238,9 @@ packageOutflows(elm1);
 packageOutflows(elm2);
 packageOutflows(elm3);
 
-console.log(elm1.outflows[0], elm1.outflows[1]);
-console.log(elm2.outflows[0], elm2.outflows[1]);
-console.log(elm3.outflows[0], elm3.outflows[1]);
+// console.log(elm1.outflows[0], elm1.outflows[1]);
+// console.log(elm2.outflows[0], elm2.outflows[1]);
+// console.log(elm3.outflows[0], elm3.outflows[1]);
 
 
 resolveMassFlows(elm1);
