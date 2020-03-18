@@ -65,7 +65,7 @@
 const K_W = 2.2e9; // Pa
 const RHO_W = 997; // kg/m^3
 const PR_W = 1e5; // Pa
-const TIME_STEP = 0.001; // seconds
+const TIME_STEP = 0.01; // seconds
 
 
 
@@ -117,6 +117,9 @@ function calculateOutflow (elm, momentum) {
   if (elm.mass > 0) {
     let velocity = momentum/(elm.mass/2); // since we're dealing with only half of an element (left or right side)
     massFlow = Math.abs(velocity*TIME_STEP*elm.area);
+    if (massFlow > elm.mass/2) {massFlow = elm.mass/2;} // really need to dynamically break up the TIME_STEP in these circumstances
+    // basically run a series of massflow calculations on the element and its neighbours
+
   } else {
     massFlow = 0;
   }
@@ -165,7 +168,7 @@ function resolveMassFlows (elm) {
 let elm1 = {
   diameter: 0.064, // m
   elm_length: 0.1, // m
-  pressure: 1e5, //Pa
+  pressure: 2e6, //Pa
   type: 'simple',
   angle: 0, //radians, relative to positive x-direction
   neighbours: ["",""],
@@ -200,7 +203,7 @@ elm2.volume = findElementVolume(elm1);
 let elm3 = {
   diameter: 0.064, // m
   elm_length: 0.100, // m
-  pressure: 1.0e6, //Pa
+  pressure: 2.0e6, //Pa
   type: 'simple',
   angle: 0,
   neighbours: ["",""],
