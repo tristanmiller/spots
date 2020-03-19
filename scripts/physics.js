@@ -63,10 +63,11 @@
 //// elements it is connected to
 
 const K_W = 2.2e9; // Pa
-const RHO_W = 997; // kg/m^3
+const RHO_W = 997.0; // kg/m^3
 const PR_W = 1.015e5; // Pa
-const TIME_STEP = 0.0005; // seconds
-
+const MU_W = 1.787e-6; //m^2/s
+const TIME_STEP = 0.0007; // seconds
+const INTERVALS = Math.round(1/TIME_STEP);
 
 
 function newDensityFromPressure (pr, pr_ref, rho_ref, K) {
@@ -76,6 +77,7 @@ function newDensityFromPressure (pr, pr_ref, rho_ref, K) {
 }
 
 function newPressureFromDensity (rho, rho_ref, pr_ref, K) {
+  // let pr_new = K*Math.log(rho/rho_ref);
   let pr_new = pr_ref + K*(rho - rho_ref)/rho_ref;
   return pr_new;
 }
@@ -111,6 +113,24 @@ function calculatePressureForces (elm) {
     }
   }
   return forces;
+}
+
+function calculateFrictionForces (elm) {
+  let force = 0;
+  //force is proportional to the square of velocity, inversely proportional to diameter
+  for (let i = 0, l = elm.momentum.length; i < l; i++) {
+    if (elm.momentum[i] != 0) {
+      let momentum_old = elm.momentum[i];
+      let velocity = momentum_old/elm.mass;
+      //whatever happens - the friction can at most halt the flow, such that abs(momentum - fdt) >= 0
+      let Re = Math.abs(velocity)*elm.diameter/MU_W;
+      let fricfac = 0.316*Math.pow(Re,-0.25);
+
+      let momentum_new = momentum_old*(1 - (fricfac)*1000*TIME_STEP);
+      if ((momentum_new/momentum_old) <= 0) {momentum_new = 0;}
+      elm.momentum[i] = momentum_new;
+    }
+  }
 }
 
 function calculateOutflow (elm, momentum) {
@@ -179,7 +199,7 @@ let elm_list = [];
 for(let i = 0; i < 30; i++) {
   let elm = {
     diameter: 0.064, // m
-    elm_length: 0.50, // m
+    elm_length: 0.1, // m
     pressure: PR_W, //Pa
     type: 'simple',
     angle: 0,
@@ -210,56 +230,66 @@ for (let i = 0, l = elm_list.length; i < l; i++) {
 // TESTING ONLY
 let elm_divs = document.getElementsByClassName('elm');
 function elm_div_opac (elm, div) {
-  let op = Math.round(100*(elm.pressure)/3e5)%100;
-  div.style.backgroundColor = 'hsl( 280, ' + op + '%, 50%)';
+  let op = Math.round(100*(elm.pressure - PR_W)/PR_W);
+  div.style.backgroundColor = 'hsl( 280, 100%, ' + op + '%)';
 }
 
 let middle_elm = elm_list[Math.ceil(elm_list.length/2)];
 
 
-middle_elm.pressure = 3e6;
-middle_elm.density = newDensityFromPressure(middle_elm.pressure, PR_W, RHO_W, K_W);
+elm_list[0].pressure = 50*PR_W;
+console.log(elm_list[0].rho);
+elm_list[0].rho = newDensityFromPressure(elm_list[0].pressure, PR_W, RHO_W, K_W);
+elm_list[0].mass = findElementMass(elm_list[0]);
+
+middle_elm.diameter = 0.002;
+middle_elm.area = findElementCrossSectionalArea(middle_elm);
+middle_elm.volume = findElementVolume(middle_elm);
+middle_elm.mass = findElementMass(middle_elm);
+middle_elm.rho = middle_elm.mass/middle_elm.volume;
 //////////////////////
 
 
 function visualise() {
+  for (let p = 0, l = 1; p < l; p++){
+    for (let i = 0, l = elm_list.length; i < l; i++) {
+      let elm = elm_list[i];
+      let forces = calculatePressureForces(elm);
+      elm.momentum[0] += forces[0]*TIME_STEP;
+      elm.momentum[1] += forces[1]*TIME_STEP;
+      calculateFrictionForces(elm);
 
-  for (let i = 0, l = elm_list.length; i < l; i++) {
-    let elm = elm_list[i];
-    let forces = calculatePressureForces(elm);
-    elm.momentum[0] += forces[0]*TIME_STEP;
-    elm.momentum[1] += forces[1]*TIME_STEP;
+    }
 
-  }
+    for (let i = 0, l = elm_list.length; i < l; i++) {
+      let elm = elm_list[i];
+      packageOutflows(elm);
+    }
 
-  for (let i = 0, l = elm_list.length; i < l; i++) {
-    let elm = elm_list[i];
-    packageOutflows(elm);
-  }
-
-  for (let i = 0, l = elm_list.length; i < l; i++) {
-    let elm = elm_list[i];
-    resolveMassFlows(elm);
-  }
-
-
-  // let total_mass = elm1.mass + elm2.mass + elm3.mass;
-  // let total_momentum = elm1.momentum[0] + elm1.momentum[1] + elm2.momentum[0] + elm2.momentum[1] + elm3.momentum[0] + elm3.momentum[1];
-  // console.log("Mass, momentum: " + total_mass, total_momentum);
+    for (let i = 0, l = elm_list.length; i < l; i++) {
+      let elm = elm_list[i];
+      resolveMassFlows(elm);
+    }
 
 
-  // recalculate densities, pressures, ready for the next cycle!
-  for (let i = 0, l = elm_list.length; i < l; i++) {
-    let elm = elm_list[i];
-    elm.rho = elm.mass/elm.volume;
-    elm.pressure = newPressureFromDensity(elm.rho, RHO_W, PR_W, K_W);
-  }
+    // let total_mass = elm1.mass + elm2.mass + elm3.mass;
+    // let total_momentum = elm1.momentum[0] + elm1.momentum[1] + elm2.momentum[0] + elm2.momentum[1] + elm3.momentum[0] + elm3.momentum[1];
+    // console.log("Mass, momentum: " + total_mass, total_momentum);
 
+
+    // recalculate densities, pressures, ready for the next cycle!
+    for (let i = 0, l = elm_list.length; i < l; i++) {
+      let elm = elm_list[i];
+      elm.rho = elm.mass/elm.volume;
+      elm.pressure = newPressureFromDensity(elm.rho, RHO_W, PR_W, K_W);
+    }
+}
   for (let i = 0, l = elm_list.length; i < l; i++) {
     let elm = elm_list[i];
     elm_div_opac(elm, elm_divs[i]);
+    elm_divs[i].style.height = 100*elm.diameter/0.064 + '%';
+    elm_divs[i].innerHTML = Math.floor(elm.pressure/1000) + 'kPa';
   }
-
   requestAnimationFrame (visualise);
 }
 

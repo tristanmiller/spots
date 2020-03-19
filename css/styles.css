@@ -12,6 +12,8 @@
 	height: 100%;
 	background-color: rgba(255, 0, 0, 1);
 	margin: 1px;
+	writing-mode: vertical-rl;
+	color: red;
 }
 
 .update {
