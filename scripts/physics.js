@@ -66,7 +66,7 @@ const K_W = 2.2e9; // Pa
 const RHO_W = 997.0; // kg/m^3
 const PR_W = 1.015e5; // Pa
 const MU_W = 1.787e-6; //m^2/s
-const TIME_STEP = 0.0007; // seconds
+const TIME_STEP = 0.001; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 
 
@@ -196,7 +196,7 @@ let elm_container = document.getElementsByClassName('elm_container')[0];
 //create a list of elements
 let elm_list = [];
 
-for(let i = 0; i < 30; i++) {
+for(let i = 0; i < 10; i++) {
   let elm = {
     diameter: 0.064, // m
     elm_length: 0.1, // m
@@ -237,7 +237,7 @@ function elm_div_opac (elm, div) {
 let middle_elm = elm_list[Math.ceil(elm_list.length/2)];
 
 
-elm_list[0].pressure = 50*PR_W;
+elm_list[0].pressure = 3*PR_W;
 console.log(elm_list[0].rho);
 elm_list[0].rho = newDensityFromPressure(elm_list[0].pressure, PR_W, RHO_W, K_W);
 elm_list[0].mass = findElementMass(elm_list[0]);
@@ -251,7 +251,7 @@ middle_elm.rho = middle_elm.mass/middle_elm.volume;
 
 
 function visualise() {
-  for (let p = 0, l = 1; p < l; p++){
+  for (let p = 0, l = INTERVALS; p < l; p++){
     for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
       let forces = calculatePressureForces(elm);
