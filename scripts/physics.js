@@ -163,7 +163,7 @@ function packageOutflows (elm) {
     //somewhere here: if the outflow is sufficient to drop the pressure below cavitation pressure, limit it here.
     //calculate total outflow and see if it will drop the density below a critical threshold
     //if so...decrease outflows and corresponding inflows to neighbours proportionately
-    let total_outflow = 0;
+    let total_outflow = 0;  // NO! This has to be net outflow, and must be done after all inflows/outflows are decided!
     for (let i = 0, l = elm.outflows.length; i < l; i++) {
       if(elm.outflows[i].mass) {
         total_outflow += elm.outflows[i].mass;
@@ -189,6 +189,8 @@ function packageOutflows (elm) {
       //reduce the momenta in each direction by an appropriate percentage
       //repackage the outflows and neighbour inflows (recurse to this function)
     }
+
+
   }
 
 
