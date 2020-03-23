@@ -68,7 +68,7 @@ const PR_W = 1.015e5; // Pa
 const MU_W = 1.787e-6; //m^2/s
 const TIME_STEP = 0.001; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
-const RHO_Crit_W = 0; //pre-calculated critical density that produces cavitation pressure for water
+const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 
 function newDensityFromPressure (pr, pr_ref, rho_ref, K) {
   // let rho_new = rho_ref/(1 - (pr - pr_ref)/K);
@@ -169,6 +169,10 @@ function packageOutflows (elm) {
     }
     if ((elm.mass - total_outflow)/elm.volume < RHO_Crit_W) {
       //work out how much mass flow there should have been to get to just above RHO_Crit_W
+      let mass_critical = RHO_Crit_W*elm.volume;
+      let massFlow_max = total_outflow - mass_critical;
+      let scale_factor = massFlow_max/total_outflow;
+      console.log(scale_factor);
       //reduce the momenta in each direction by an appropriate percentage
       //repackage the outflows and neighbour inflows (recurse to this function)
     }
