@@ -160,41 +160,57 @@ function packageOutflows (elm) {
       }
 
     }
-    //somewhere here: if the outflow is sufficient to drop the pressure below cavitation pressure, limit it here.
-    //calculate total outflow and see if it will drop the density below a critical threshold
-    //if so...decrease outflows and corresponding inflows to neighbours proportionately
-    let total_outflow = 0;  // NO! This has to be net outflow, and must be done after all inflows/outflows are decided!
-    for (let i = 0, l = elm.outflows.length; i < l; i++) {
-      if(elm.outflows[i].mass) {
-        total_outflow += elm.outflows[i].mass;
-      }
-    }
-    if (total_outflow > 0 && (elm.mass - total_outflow)/elm.volume < RHO_Crit_W) {
-      //work out how much mass flow there should have been to get to just above RHO_Crit_W
-      let mass_critical = RHO_Crit_W*elm.volume;
-      let massFlow_max = elm.mass - mass_critical;
-      //console.log('mf_max = ' + massFlow_max);
-
-      let scale_factor = massFlow_max/total_outflow;
-      //console.log(scale_factor);
-      for (let i = 0, l = elm.momentum.length; i < l; i++) {
-        if(elm.momentum[i] < 0 && i == 0 || elm.momentum[i] > 0 && i == 1) {
-          //console.log(elm.momentum[i]);
-          elm.momentum[i] = scale_factor*elm.momentum[i];
-          //console.log(elm.momentum[i]);
-        }
-      }
-      elm.outflows = ['', ''];
-      packageOutflows(elm);
-      //reduce the momenta in each direction by an appropriate percentage
-      //repackage the outflows and neighbour inflows (recurse to this function)
-    }
 
 
   }
 
 
 }
+
+function checkMassFlows (elm) {
+  // calculate the net outflow for an element.
+  // If the outflow is enough to provoke a negative pressure, scale any outbound momenta
+  // and recalculate outflows, and inflows into neigbouring elements.
+  // This means the flows must be recalculated again for the neighbours too...
+  // ...if this happens, 'checkMassFlows' again for the neighbouring elements
+  let net_outflow = 0;
+  if(elm.outflows){
+    for (let i = 0, l = elm.outflows.length; i < l; i++) {
+      if (elm.outflows[i].mass) {
+        net_outflow += elm.outflows[i].mass;
+      }
+      if (elm.inflows[i].mass) {
+        net_outflow -= elm.inflows[i].mass;
+      }
+    }
+  }
+
+  // console.log(net_outflow);
+  if (net_outflow > 0 && (elm.mass - net_outflow)/elm.volume < RHO_Crit_W) {
+    //work out how much mass flow there should have been to get to just above RHO_Crit_W
+    let mass_critical = RHO_Crit_W*elm.volume;
+    let massFlow_max = elm.mass - mass_critical;
+    // console.log('mf_max = ' + massFlow_max);
+
+    let scale_factor = massFlow_max/net_outflow;
+    //console.log(scale_factor);
+    for (let i = 0, l = elm.momentum.length; i < l; i++) {
+      if(elm.momentum[i] < 0 && i == 0 || elm.momentum[i] > 0 && i == 1) {
+        //console.log(elm.momentum[i]);
+        elm.momentum[i] = scale_factor*elm.momentum[i];
+        //console.log(elm.momentum[i]);
+      }
+    }
+    elm.outflows = ['', ''];
+    packageOutflows(elm);
+    for (let i = 0, l = elm.neighbours.length; i < l; i++) {
+      checkMassFlows(elm.neighbours[i]);
+    }
+    //reduce the momenta in each direction by an appropriate percentage
+    //repackage the outflows and neighbour inflows (recurse to this function)
+  }
+}
+
 
 function resolveMassFlows (elm) {
   for (let i = 0, l = elm.inflows.length; i < l; i++) {
@@ -243,7 +259,6 @@ for(let i = 0; i < 100; i++) {
     inflows: ["",""],
   }
 
-  elm.diameter = elm.diameter*((i+1)/100);
 
   elm_list.push(elm);
 
@@ -273,11 +288,11 @@ function elm_div_opac (elm, div) {
 let middle_elm = elm_list[Math.ceil(elm_list.length/2)];
 
 
-elm_list[0].pressure = 100*PR_W;
+elm_list[0].pressure = 1000*PR_W;
 elm_list[0].rho = newDensityFromPressure(elm_list[0].pressure, PR_W, RHO_W, K_W);
 elm_list[0].mass = findElementMass(elm_list[0]);
 
-//middle_elm.diameter = 0.02;
+middle_elm.diameter = 0.02;
 middle_elm.area = findElementCrossSectionalArea(middle_elm);
 middle_elm.volume = findElementVolume(middle_elm);
 middle_elm.mass = findElementMass(middle_elm);
@@ -286,7 +301,7 @@ middle_elm.rho = middle_elm.mass/middle_elm.volume;
 
 
 function visualise() {
-  for (let p = 0, l = 1; p < l; p++){
+  for (let p = 0, l = INTERVALS; p < l; p++){
     for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
       let forces = calculatePressureForces(elm);
@@ -299,6 +314,11 @@ function visualise() {
     for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
       packageOutflows(elm);
+    }
+
+    for (let i = 0, l = elm_list.length; i < l; i++) {
+      let elm = elm_list[i];
+      checkMassFlows(elm);
     }
 
     for (let i = 0, l = elm_list.length; i < l; i++) {
