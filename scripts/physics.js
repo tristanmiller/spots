@@ -66,7 +66,7 @@ const K_W = 2.2e9; // Pa
 const RHO_W = 997.0; // kg/m^3
 const PR_W = 1.015e5; // Pa
 const MU_W = 1.787e-6; //m^2/s
-const TIME_STEP = 0.001; // seconds
+const TIME_STEP = 0.0001; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 
