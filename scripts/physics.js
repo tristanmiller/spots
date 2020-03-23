@@ -66,7 +66,7 @@ const K_W = 2.2e9; // Pa
 const RHO_W = 997.0; // kg/m^3
 const PR_W = 1.015e5; // Pa
 const MU_W = 1.787e-6; //m^2/s
-const TIME_STEP = 0.0001; // seconds
+const TIME_STEP = 0.001; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 
@@ -246,7 +246,7 @@ let elm_container = document.getElementsByClassName('elm_container')[0];
 //create a list of elements
 let elm_list = [];
 
-for(let i = 0; i < 100; i++) {
+for(let i = 0; i < 20; i++) {
   let elm = {
     diameter: 0.064, // m
     elm_length: 0.1, // m
@@ -288,11 +288,11 @@ function elm_div_opac (elm, div) {
 let middle_elm = elm_list[Math.ceil(elm_list.length/2)];
 
 
-elm_list[0].pressure = 1000*PR_W;
+elm_list[0].pressure = 60*PR_W;
 elm_list[0].rho = newDensityFromPressure(elm_list[0].pressure, PR_W, RHO_W, K_W);
 elm_list[0].mass = findElementMass(elm_list[0]);
 
-middle_elm.diameter = 0.02;
+middle_elm.diameter = 0.002;
 middle_elm.area = findElementCrossSectionalArea(middle_elm);
 middle_elm.volume = findElementVolume(middle_elm);
 middle_elm.mass = findElementMass(middle_elm);
