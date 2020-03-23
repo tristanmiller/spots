@@ -68,7 +68,7 @@ const PR_W = 1.015e5; // Pa
 const MU_W = 1.787e-6; //m^2/s
 const TIME_STEP = 0.001; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
-
+const RHO_Crit_W = 0; //pre-calculated critical density that produces cavitation pressure for water
 
 function newDensityFromPressure (pr, pr_ref, rho_ref, K) {
   // let rho_new = rho_ref/(1 - (pr - pr_ref)/K);
@@ -153,13 +153,28 @@ function packageOutflows (elm) {
       let massFlow = calculateOutflow(elm, elm.momentum[i]);
       if ((i == 0 && elm.momentum[i] < 0) || (i == 1 && elm.momentum[i] > 0)) {
       // add to this element's outflow list.
-
-        elm.outflows[i] = {mass: massFlow, momentum: elm.momentum[i]*massFlow/(elm.mass/2)};
-        elm.neighbours[i].inflows[(i - 1)*(i - 1)] = {mass: massFlow, momentum: elm.momentum[i]*massFlow/(elm.mass/2)};
       // add to the neighbour element's inflow list.
+        elm.outflows[i] = {mass: massFlow, momentum: elm.momentum[i]*massFlow/(elm.mass/2)};
+        elm.neighbours[i].inflows[(i - 1)*(i - 1)] = elm.outflows[i];
+
       }
+
+    }
+    //somewhere here: if the outflow is sufficient to drop the pressure below cavitation pressure, limit it here.
+    //calculate total outflow and see if it will drop the density below a critical threshold
+    //if so...decrease outflows and corresponding inflows to neighbours proportionately
+    let total_outflow = 0;
+    for (let i = 0, l = elm.outflows.length; i < l; i++) {
+      total_outflow += elm.outflows[i].mass;
+    }
+    if ((elm.mass - total_outflow)/elm.volume < RHO_Crit_W) {
+      //work out how much mass flow there should have been to get to just above RHO_Crit_W
+      //reduce the momenta in each direction by an appropriate percentage
+      //repackage the outflows and neighbour inflows (recurse to this function)
     }
   }
+
+
 }
 
 function resolveMassFlows (elm) {
