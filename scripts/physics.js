@@ -138,7 +138,7 @@ function calculateOutflow (elm, momentum) {
   if (elm.mass > 0) {
     let velocity = momentum/(elm.mass/2); // since we're dealing with only half of an element (left or right side)
     massFlow = Math.abs(velocity*TIME_STEP*elm.area);
-    if (massFlow > elm.mass/2) {massFlow = elm.mass/2;} // really need to dynamically break up the TIME_STEP in these circumstances
+    //if (massFlow > elm.mass/2) {massFlow = elm.mass/2;} // really need to dynamically break up the TIME_STEP in these circumstances
     // basically run a series of massflow calculations on the element and its neighbours
 
   } else {
@@ -165,14 +165,27 @@ function packageOutflows (elm) {
     //if so...decrease outflows and corresponding inflows to neighbours proportionately
     let total_outflow = 0;
     for (let i = 0, l = elm.outflows.length; i < l; i++) {
-      total_outflow += elm.outflows[i].mass;
+      if(elm.outflows[i].mass) {
+        total_outflow += elm.outflows[i].mass;
+      }
     }
-    if ((elm.mass - total_outflow)/elm.volume < RHO_Crit_W) {
+    if (total_outflow > 0 && (elm.mass - total_outflow)/elm.volume < RHO_Crit_W) {
       //work out how much mass flow there should have been to get to just above RHO_Crit_W
       let mass_critical = RHO_Crit_W*elm.volume;
-      let massFlow_max = total_outflow - mass_critical;
+      let massFlow_max = elm.mass - mass_critical;
+      //console.log('mf_max = ' + massFlow_max);
+
       let scale_factor = massFlow_max/total_outflow;
-      console.log(scale_factor);
+      //console.log(scale_factor);
+      for (let i = 0, l = elm.momentum.length; i < l; i++) {
+        if(elm.momentum[i] < 0 && i == 0 || elm.momentum[i] > 0 && i == 1) {
+          //console.log(elm.momentum[i]);
+          elm.momentum[i] = scale_factor*elm.momentum[i];
+          //console.log(elm.momentum[i]);
+        }
+      }
+      elm.outflows = ['', ''];
+      packageOutflows(elm);
       //reduce the momenta in each direction by an appropriate percentage
       //repackage the outflows and neighbour inflows (recurse to this function)
     }
@@ -215,7 +228,7 @@ let elm_container = document.getElementsByClassName('elm_container')[0];
 //create a list of elements
 let elm_list = [];
 
-for(let i = 0; i < 30; i++) {
+for(let i = 0; i < 100; i++) {
   let elm = {
     diameter: 0.064, // m
     elm_length: 0.1, // m
@@ -227,6 +240,8 @@ for(let i = 0; i < 30; i++) {
     outflows: ["",""],
     inflows: ["",""],
   }
+
+  elm.diameter = elm.diameter*((i+1)/100);
 
   elm_list.push(elm);
 
@@ -257,11 +272,10 @@ let middle_elm = elm_list[Math.ceil(elm_list.length/2)];
 
 
 elm_list[0].pressure = 100*PR_W;
-console.log(elm_list[0].rho);
 elm_list[0].rho = newDensityFromPressure(elm_list[0].pressure, PR_W, RHO_W, K_W);
 elm_list[0].mass = findElementMass(elm_list[0]);
 
-middle_elm.diameter = 0.001;
+//middle_elm.diameter = 0.02;
 middle_elm.area = findElementCrossSectionalArea(middle_elm);
 middle_elm.volume = findElementVolume(middle_elm);
 middle_elm.mass = findElementMass(middle_elm);
@@ -270,7 +284,7 @@ middle_elm.rho = middle_elm.mass/middle_elm.volume;
 
 
 function visualise() {
-  for (let p = 0, l = INTERVALS; p < l; p++){
+  for (let p = 0, l = 1; p < l; p++){
     for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
       let forces = calculatePressureForces(elm);
