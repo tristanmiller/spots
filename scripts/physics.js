@@ -123,10 +123,10 @@ function calculateFrictionForces (elm) {
       let momentum_old = elm.momentum[i];
       let velocity = momentum_old/elm.mass;
       //whatever happens - the friction can at most halt the flow, such that abs(momentum - fdt) >= 0
-      let Re = velocity*elm.diameter/MU_W;
+      let Re = Math.abs(velocity)*elm.diameter/MU_W;
          let fricfac = Math.pow(Re,-0.1);
          let momentum_new = momentum_old*(1 - 1000000*(fricfac)*TIME_STEP);
-      if ((momentum_new/momentum_old) <= 0) {momentum_new = 0; console.log('it happened');}
+      if ((momentum_new/momentum_old) <= 0) {momentum_new = 0;}
       elm.momentum[i] = momentum_new;
     }
   }
@@ -238,9 +238,9 @@ let elm_container = document.getElementsByClassName('elm_container')[0];
 //create a list of elements
 let elm_list = [];
 
-for(let i = 0; i < 6; i++) {
+for(let i = 0; i < 21; i++) {
   let elm = {
-    diameter: 0.013, // m
+    diameter: 0.064, // m
     elm_length: 0.1, // m
     pressure: PR_W, //Pa
     type: 'simple',
@@ -280,11 +280,11 @@ function elm_div_opac (elm, div) {
 let middle_elm = elm_list[Math.ceil(elm_list.length/2)];
 
 
-elm_list[0].pressure = 30*PR_W;
+elm_list[0].pressure = 100*PR_W;
 elm_list[0].rho = newDensityFromPressure(elm_list[0].pressure, PR_W, RHO_W, K_W);
 elm_list[0].mass = findElementMass(elm_list[0]);
 
-middle_elm.diameter = 0.053;
+middle_elm.diameter = 0.001;
 middle_elm.area = findElementCrossSectionalArea(middle_elm);
 middle_elm.volume = findElementVolume(middle_elm);
 middle_elm.mass = findElementMass(middle_elm);
@@ -293,8 +293,7 @@ middle_elm.rho = middle_elm.mass/middle_elm.volume;
 
 
 function visualise() {
-  console.log(elm_list[elm_list.length - 1].momentum);
-  for (let p = 0, l = 1; p < l; p++){
+  for (let p = 0, l = INTERVALS; p < l; p++){
     for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
       calculateFrictionForces(elm);
