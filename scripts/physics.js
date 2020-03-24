@@ -280,7 +280,7 @@ function elm_div_opac (elm, div) {
 let middle_elm = elm_list[Math.ceil(elm_list.length/2)];
 
 
-elm_list[0].pressure = 100*PR_W;
+elm_list[0].pressure = 1.5*PR_W;
 elm_list[0].rho = newDensityFromPressure(elm_list[0].pressure, PR_W, RHO_W, K_W);
 elm_list[0].mass = findElementMass(elm_list[0]);
 
@@ -332,7 +332,7 @@ function visualise() {
     let elm = elm_list[i];
     elm_div_opac(elm, elm_divs[i]);
     elm_divs[i].style.height = 100*elm.diameter/0.064 + '%';
-    elm_divs[i].innerHTML = Math.floor(elm.pressure/1000) + 'kPa';
+    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa';
   }
   requestAnimationFrame (visualise);
 }
