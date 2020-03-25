@@ -70,6 +70,8 @@ const TIME_STEP = 0.001; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
+const FRIC_CONST = 0.1;
+const RESTRICTION_DIAMETER = 0.030;
 
 
 function newDensityFromPressure (pr, pr_ref, rho_ref, K) {
@@ -124,21 +126,24 @@ function calculateGravForces (elm) {
 }
 
 function calculateFrictionForces (elm) {
-  let force = 0;
+  let forces = [0, 0];
   //force is proportional to the square of velocity, inversely proportional to diameter
   for (let i = 0, l = elm.momentum.length; i < l; i++) {
     if (elm.momentum[i] != 0) {
-      let momentum_old = elm.momentum[i];
-      let velocity = momentum_old/elm.mass;
+      let momentum = elm.momentum[i];
+      let velocity = momentum/elm.mass;
       //whatever happens - the friction can at most halt the flow, such that abs(momentum - fdt) >= 0
-      let Re = Math.abs(velocity)*elm.diameter/MU_W;
-      let fricfac = 0.3*Math.pow(Re,-0.25);
-         // console.log(fricfac);
-      let momentum_new = momentum_old*Math.pow(fricfac, TIME_STEP);
-      if ((momentum_new/momentum_old) <= 0) {momentum_new = 0;}
-      elm.momentum[i] = momentum_new;
+      let fric = -1*Math.sign(velocity)*FRIC_CONST*elm.elm_length*Math.pow(velocity,2)/elm.area;
+      forces[i] = fric;
+      // let Re = Math.abs(velocity)*elm.diameter/MU_W;
+      // let fricfac = elm.elm_length*Math.pow(Re,-0.25);
+      // console.log(fricfac);
+      // let momentum_new = momentum_old*Math.pow(fricfac, 10*TIME_STEP);
+      //if ((momentum_new/momentum_old) <= 0) {momentum_new = 0;}
+      // elm.momentum[i] = momentum_new;
     }
   }
+  return forces;
 }
 
 function calculateBrictionForces (elm) {
@@ -260,7 +265,7 @@ for(let i = 0; i < 15; i++) {
     pos_middle: {x: 0, z: 0},
     angle: 0.5*Math.PI, //radians, vertically above horizontal
     diameter: 0.064, // m
-    elm_length: 0.1, // m
+    elm_length: 0.2, // m
     pressure: PR_W, //Pa
     type: 'simple',
 
@@ -329,7 +334,7 @@ elm_list[0].pressure = PR_W;
 elm_list[0].rho = newDensityFromPressure(elm_list[0].pressure, PR_W, RHO_W, K_W);
 elm_list[0].mass = findElementMass(elm_list[0]);
 
-middle_elm.diameter = 0.01;
+middle_elm.diameter = RESTRICTION_DIAMETER;
 middle_elm.area = findElementCrossSectionalArea(middle_elm);
 middle_elm.volume = findElementVolume(middle_elm);
 middle_elm.mass = findElementMass(middle_elm);
@@ -342,14 +347,21 @@ function visualise() {
   for (let p = 0, l = INTERVALS; p < l; p++){
     for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
-       calculateFrictionForces(elm);
 
       let forces_p = calculatePressureForces(elm);
       let forces_g = calculateGravForces(elm);
-
+      // let forces_g = [0,0];
       elm.momentum[0] += (forces_p[0] + forces_g[0])*TIME_STEP;
       elm.momentum[1] += (forces_p[1] + forces_g[1])*TIME_STEP;
 
+      let momentum_old = elm.momentum;
+
+      let forces_f = calculateFrictionForces(elm);
+
+      elm.momentum[0] += (forces_f[0])*TIME_STEP;
+      elm.momentum[1] += (forces_f[1])*TIME_STEP;
+      if (elm.momentum[1]/momentum_old[1] < 0) {elm.momentum[1] = 0;}
+      if (elm.momentum[0]/momentum_old[0] < 0) {elm.momentum[0] = 0;}
 
     }
 
