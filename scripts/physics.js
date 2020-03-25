@@ -118,9 +118,8 @@ function calculatePressureForces (elm) {
 }
 
 function calculateGravForces (elm) {
-  let forces = [0,0];
   let Fg = -1*GRAV_ACCN*(elm.mass/2)*elm.directionSine;
-  forces = [Fg, Fg];
+  let forces = [Fg, Fg];
   return forces;
 }
 
@@ -133,11 +132,18 @@ function calculateFrictionForces (elm) {
       let velocity = momentum_old/elm.mass;
       //whatever happens - the friction can at most halt the flow, such that abs(momentum - fdt) >= 0
       let Re = Math.abs(velocity)*elm.diameter/MU_W;
-         let fricfac = Math.pow(Re,-0.1);
-         let momentum_new = momentum_old*(1 - 1000000*(fricfac)*TIME_STEP);
+      let fricfac = 0.3*Math.pow(Re,-0.25);
+         // console.log(fricfac);
+      let momentum_new = momentum_old*Math.pow(fricfac, TIME_STEP);
       if ((momentum_new/momentum_old) <= 0) {momentum_new = 0;}
       elm.momentum[i] = momentum_new;
     }
+  }
+}
+
+function calculateBrictionForces (elm) {
+  for (let i = 0, l = elm.momentum.length; i < l; i++){
+    elm.momentum[i] *= Math.pow(0.99,1);
   }
 }
 
@@ -193,7 +199,7 @@ function checkMassFlows (elm) {
     let massFlow_max = elm.mass - mass_critical;
     // console.log('mf_max = ' + massFlow_max);
 
-    let scale_factor = massFlow_max/net_outflow;
+    let scale_factor = massFlow_max/(net_outflow);
     //console.log(scale_factor);
     for (let i = 0, l = elm.momentum.length; i < l; i++) {
       if(elm.momentum[i] < 0 && i == 0 || elm.momentum[i] > 0 && i == 1) {
@@ -249,11 +255,12 @@ let elm_list = [];
 
 for(let i = 0; i < 15; i++) {
   let elm = {
-    start_pos: {x: 0, z: 0},
-    end_pos: {x: 0, z: 0},
-    angle: 0.25*Math.PI, //radians, vertically above horizontal
+    pos_start: {x: 0, z: 0},
+    pos_end: {x: 0, z: 0},
+    pos_middle: {x: 0, z: 0},
+    angle: 0.5*Math.PI, //radians, vertically above horizontal
     diameter: 0.064, // m
-    elm_length: 0.2, // m
+    elm_length: 0.1, // m
     pressure: PR_W, //Pa
     type: 'simple',
 
@@ -267,28 +274,30 @@ for(let i = 0; i < 15; i++) {
   elm_list.push(elm);
 
   if (i > 0) {
-    elm.start_pos.x = elm_list[i-1].end_pos.x;
-    elm.start_pos.z = elm_list[i-1].end_pos.z;
+    elm.pos_start.x = elm_list[i-1].pos_end.x;
+    elm.pos_start.z = elm_list[i-1].pos_end.z;
   }
 
 
 
-  if('angle' in elm && 'start_pos' in elm && 'elm_length' in elm ) {
+  if('angle' in elm && 'pos_start' in elm && 'elm_length' in elm ) {
 
     elm.directionSine = Math.sin(elm.angle);
     elm.directionCosine = Math.cos(elm.angle);
-  } else if ('start_pos' in elm && 'start_pos' in elm) {
-    let dz = elm.end_pos.z - elm.start_pos.z;
-    let dx = elm.end_pos.x - elm.start_pos.x;
+  } else if ('pos_start' in elm && 'pos_start' in elm) {
+    let dz = elm.pos_end.z - elm.pos_start.z;
+    let dx = elm.pos_end.x - elm.pos_start.x;
     elm.angle = Math.atan(dz/dx);
     elm.elm_length = Math.sqrt(Math.pow(dz, 2) + Math.pow(dx, 2));
     elm.directionSine = dz/elm.elm_length;
     elm.directionCosine = dx/elm.elm_length;
   }
 
-  elm.end_pos.x = elm.start_pos.x + elm.elm_length*elm.directionCosine;
-  elm.end_pos.z = elm.start_pos.z + elm.elm_length*elm.directionSine;
+  elm.pos_end.x = elm.pos_start.x + elm.elm_length*elm.directionCosine;
+  elm.pos_end.z = elm.pos_start.z + elm.elm_length*elm.directionSine;
 
+  elm.pos_middle.x = (elm.pos_start.x + elm.pos_end.x)/2;
+  elm.pos_middle.z = (elm.pos_start.z + elm.pos_end.z)/2;
 
   elm.rho = newDensityFromPressure(elm.pressure, PR_W, RHO_W, K_W);
   elm.mass = findElementMass(elm);
@@ -320,7 +329,7 @@ elm_list[0].pressure = PR_W;
 elm_list[0].rho = newDensityFromPressure(elm_list[0].pressure, PR_W, RHO_W, K_W);
 elm_list[0].mass = findElementMass(elm_list[0]);
 
-middle_elm.diameter = 0.064;
+middle_elm.diameter = 0.01;
 middle_elm.area = findElementCrossSectionalArea(middle_elm);
 middle_elm.volume = findElementVolume(middle_elm);
 middle_elm.mass = findElementMass(middle_elm);
@@ -329,11 +338,11 @@ middle_elm.rho = middle_elm.mass/middle_elm.volume;
 
 
 function visualise() {
-  //console.log(calculateGravForces(middle_elm), calculatePressureForces(middle_elm));
-  for (let p = 0, l = 1; p < l; p++){
+  // console.log(calculateGravForces(middle_elm));
+  for (let p = 0, l = INTERVALS; p < l; p++){
     for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
-      calculateFrictionForces(elm);
+       calculateFrictionForces(elm);
 
       let forces_p = calculatePressureForces(elm);
       let forces_g = calculateGravForces(elm);
