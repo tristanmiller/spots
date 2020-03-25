@@ -69,6 +69,8 @@ const MU_W = 1.787e-6; //m^2/s
 const TIME_STEP = 0.001; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
+const GRAV_ACCN = 9.8; //ms^-2
+
 
 function newDensityFromPressure (pr, pr_ref, rho_ref, K) {
   // let rho_new = rho_ref/(1 - (pr - pr_ref)/K);
@@ -112,6 +114,13 @@ function calculatePressureForces (elm) {
       forces[i] += 0;
     }
   }
+  return forces;
+}
+
+function calculateGravForces (elm) {
+  let forces = [0,0];
+  let Fg = -1*GRAV_ACCN*elm.mass*elm.directionSine;
+  forces = [Fg, Fg];
   return forces;
 }
 
@@ -238,13 +247,16 @@ let elm_container = document.getElementsByClassName('elm_container')[0];
 //create a list of elements
 let elm_list = [];
 
-for(let i = 0; i < 21; i++) {
+for(let i = 0; i < 15; i++) {
   let elm = {
+    start_pos: {x: 0, z: 0},
+    end_pos: {x: 0, z: 0},
+    angle: 0.25*Math.PI, //radians, vertically above horizontal
     diameter: 0.064, // m
-    elm_length: 0.1, // m
+    elm_length: 0.2, // m
     pressure: PR_W, //Pa
     type: 'simple',
-    angle: 0,
+
     neighbours: ["",""],
     momentum: [0, 0],
     outflows: ["",""],
@@ -253,6 +265,30 @@ for(let i = 0; i < 21; i++) {
 
 
   elm_list.push(elm);
+
+  if (i > 0) {
+    elm.start_pos.x = elm_list[i-1].end_pos.x;
+    elm.start_pos.z = elm_list[i-1].end_pos.z;
+  }
+
+
+
+  if('angle' in elm && 'start_pos' in elm && 'elm_length' in elm ) {
+
+    elm.directionSine = Math.sin(elm.angle);
+    elm.directionCosine = Math.cos(elm.angle);
+  } else if ('start_pos' in elm && 'start_pos' in elm) {
+    let dz = elm.end_pos.z - elm.start_pos.z;
+    let dx = elm.end_pos.x - elm.start_pos.x;
+    elm.angle = Math.atan(dz/dx);
+    elm.elm_length = Math.sqrt(Math.pow(dz, 2) + Math.pow(dx, 2));
+    elm.directionSine = dz/elm.elm_length;
+    elm.directionCosine = dx/elm.elm_length;
+  }
+
+  elm.end_pos.x = elm.start_pos.x + elm.elm_length*elm.directionCosine;
+  elm.end_pos.z = elm.start_pos.z + elm.elm_length*elm.directionSine;
+
 
   elm.rho = newDensityFromPressure(elm.pressure, PR_W, RHO_W, K_W);
   elm.mass = findElementMass(elm);
@@ -273,18 +309,18 @@ for (let i = 0, l = elm_list.length; i < l; i++) {
 // TESTING ONLY
 let elm_divs = document.getElementsByClassName('elm');
 function elm_div_opac (elm, div) {
-  let op = Math.round(100*(elm.pressure - PR_W)/(15*PR_W));
+  let op = Math.round(100*(elm.pressure - PR_W + 20000)/(PR_W));
   div.style.backgroundColor = 'hsl( 280, 100%, ' + op + '%)';
 }
 
 let middle_elm = elm_list[Math.ceil(elm_list.length/2)];
 
 
-elm_list[0].pressure = 1.5*PR_W;
+elm_list[0].pressure = PR_W;
 elm_list[0].rho = newDensityFromPressure(elm_list[0].pressure, PR_W, RHO_W, K_W);
 elm_list[0].mass = findElementMass(elm_list[0]);
 
-middle_elm.diameter = 0.001;
+middle_elm.diameter = 0.064;
 middle_elm.area = findElementCrossSectionalArea(middle_elm);
 middle_elm.volume = findElementVolume(middle_elm);
 middle_elm.mass = findElementMass(middle_elm);
@@ -293,14 +329,18 @@ middle_elm.rho = middle_elm.mass/middle_elm.volume;
 
 
 function visualise() {
+  //console.log(calculateGravForces(middle_elm), calculatePressureForces(middle_elm));
   for (let p = 0, l = INTERVALS; p < l; p++){
     for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
       calculateFrictionForces(elm);
 
-      let forces = calculatePressureForces(elm);
-      elm.momentum[0] += forces[0]*TIME_STEP;
-      elm.momentum[1] += forces[1]*TIME_STEP;
+      let forces_p = calculatePressureForces(elm);
+      let forces_g = calculateGravForces(elm);
+
+      elm.momentum[0] += (forces_p[0] + forces_g[0])*TIME_STEP;
+      elm.momentum[1] += (forces_p[1] + forces_g[1])*TIME_STEP;
+
 
     }
 
