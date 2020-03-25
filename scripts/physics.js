@@ -119,7 +119,7 @@ function calculatePressureForces (elm) {
 
 function calculateGravForces (elm) {
   let forces = [0,0];
-  let Fg = -1*GRAV_ACCN*elm.mass*elm.directionSine;
+  let Fg = -1*GRAV_ACCN*(elm.mass/2)*elm.directionSine;
   forces = [Fg, Fg];
   return forces;
 }
@@ -330,7 +330,7 @@ middle_elm.rho = middle_elm.mass/middle_elm.volume;
 
 function visualise() {
   //console.log(calculateGravForces(middle_elm), calculatePressureForces(middle_elm));
-  for (let p = 0, l = INTERVALS; p < l; p++){
+  for (let p = 0, l = 1; p < l; p++){
     for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
       calculateFrictionForces(elm);
