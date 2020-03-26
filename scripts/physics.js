@@ -71,8 +71,8 @@ const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 0.1;
-const RESTRICTION_DIAMETER = 0.030;
-
+const RESTRICTION_DIAMETER = 0.01;
+const VELOCITY_LIMIT = 40; //ms^-1
 
 function newDensityFromPressure (pr, pr_ref, rho_ref, K) {
   // let rho_new = rho_ref/(1 - (pr - pr_ref)/K);
@@ -131,16 +131,11 @@ function calculateFrictionForces (elm) {
   for (let i = 0, l = elm.momentum.length; i < l; i++) {
     if (elm.momentum[i] != 0) {
       let momentum = elm.momentum[i];
-      let velocity = momentum/elm.mass;
+      let velocity = momentum/(elm.mass/2);
+
       //whatever happens - the friction can at most halt the flow, such that abs(momentum - fdt) >= 0
-      let fric = -1*Math.sign(velocity)*FRIC_CONST*elm.elm_length*Math.pow(velocity,2)/elm.area;
+      let fric = -1*FRIC_CONST*elm.elm_length*Math.pow(velocity,1)/elm.diameter;
       forces[i] = fric;
-      // let Re = Math.abs(velocity)*elm.diameter/MU_W;
-      // let fricfac = elm.elm_length*Math.pow(Re,-0.25);
-      // console.log(fricfac);
-      // let momentum_new = momentum_old*Math.pow(fricfac, 10*TIME_STEP);
-      //if ((momentum_new/momentum_old) <= 0) {momentum_new = 0;}
-      // elm.momentum[i] = momentum_new;
     }
   }
   return forces;
@@ -245,6 +240,8 @@ function resolveMassFlows (elm) {
    if (avgMomentum < 0 && !elm.neighbours[0] || avgMomentum > 0 && !elm.neighbours[1]) {
      avgMomentum = -1*avgMomentum;  //reflect on pipe end
    }
+
+
   //distribute this to each 'side' of the element
   for (let i = 0, l = elm.momentum.length; i < l; i++) {
     elm.momentum[i] = avgMomentum;
@@ -350,19 +347,27 @@ function visualise() {
 
       let forces_p = calculatePressureForces(elm);
       let forces_g = calculateGravForces(elm);
-      // let forces_g = [0,0];
-      elm.momentum[0] += (forces_p[0] + forces_g[0])*TIME_STEP;
-      elm.momentum[1] += (forces_p[1] + forces_g[1])*TIME_STEP;
-
-      let momentum_old = elm.momentum;
-
       let forces_f = calculateFrictionForces(elm);
 
-      elm.momentum[0] += (forces_f[0])*TIME_STEP;
-      elm.momentum[1] += (forces_f[1])*TIME_STEP;
-      if (elm.momentum[1]/momentum_old[1] < 0) {elm.momentum[1] = 0;}
-      if (elm.momentum[0]/momentum_old[0] < 0) {elm.momentum[0] = 0;}
+      // let forces_g = [0,0];
 
+      for (let j = 0; j < elm.momentum.length; j++) {
+        elm.momentum[j] += (forces_p[j] + forces_g[j])*TIME_STEP;
+
+        let momentum_old = elm.momentum[j];
+
+
+        elm.momentum[j] += (forces_f[j])*TIME_STEP;
+        if (elm.momentum[j]/momentum_old < 0) {elm.momentum[j] = 0;}
+
+        let velocity = elm.momentum[j]/(elm.mass/2);
+        if (velocity > VELOCITY_LIMIT || velocity < -1*VELOCITY_LIMIT) {
+          velocity = Math.sign(velocity)*VELOCITY_LIMIT;
+          elm.momentum[j] = velocity*(elm.mass/2);
+        }
+
+
+      }
     }
 
     for (let i = 0, l = elm_list.length; i < l; i++) {
