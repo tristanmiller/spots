@@ -71,8 +71,8 @@ const TIME_STEP = 0.0003; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
-const FRIC_CONST = 1 ;
-const RESTRICTION_DIAMETER = 0.0025;
+const FRIC_CONST = 2 ;
+const RESTRICTION_DIAMETER = 0.064;
 const VELOCITY_LIMIT = 33; //ms^-1
 
 function newDensityFromPressure (pr, pr_ref, rho_ref, K) {
@@ -285,14 +285,14 @@ let elm_container = document.getElementsByClassName('elm_container')[0];
 //create a list of elements
 let elm_list = [];
 
-for(let i = 0; i < 15; i++) {
+for(let i = 0, l = 40; i < l; i++) {
   let elm = {
     pos_start: {x: 0, z: 0},
     pos_end: {x: 0, z: 0},
     pos_middle: {x: 0, z: 0},
-    angle: (-1/6)*Math.PI, //radians, vertically above horizontal
+    angle: (-1/4)*Math.PI, //radians, vertically above horizontal
     diameter: 0.064, // m
-    elm_length: 0.1, // m
+    elm_length: 0.8, // m
     pressure: PR_W, //Pa
     type: 'simple',
 
@@ -302,15 +302,16 @@ for(let i = 0; i < 15; i++) {
     inflows: ["",""],
   }
 
-
   elm_list.push(elm);
+
+  if (i >= l/2) {
+    elm.angle *= -1;
+  }
 
   if (i > 0) {
     elm.pos_start.x = elm_list[i-1].pos_end.x;
     elm.pos_start.z = elm_list[i-1].pos_end.z;
   }
-
-
 
   if('angle' in elm && 'pos_start' in elm && 'elm_length' in elm ) {
 
@@ -357,7 +358,7 @@ function elm_div_opac (elm, div) {
 let middle_elm = elm_list[Math.ceil(elm_list.length/2)];
 
 
-elm_list[0].pressure = 2*PR_W;
+elm_list[0].pressure = 1*PR_W;
 elm_list[0].rho = newDensityFromPressure(elm_list[0].pressure, PR_W, RHO_W, K_W);
 elm_list[0].mass = findElementMass(elm_list[0]);
 
