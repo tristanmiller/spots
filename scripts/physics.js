@@ -74,7 +74,7 @@ const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 2 ;
 const RESTRICTION_DIAMETER = 0.01;
 const VELOCITY_LIMIT = 33; //ms^-1
-const DIFFUSION_RATE = 20000 //TEMPORARY for testing GS-Algorithm
+const DIFFUSION_RATE = 1000 //TEMPORARY for testing GS-Algorithm
 
 function newDensityFromPressure (pr, pr_ref, rho_ref, K) {
   // let rho_new = rho_ref/(1 - (pr - pr_ref)/K);
@@ -328,6 +328,41 @@ function diffuse (elms) {
   return new_densities;
 }
 
+function advect (elms) {
+  let new_densities = [];
+  for (let i = 0, l = elms.length; i < l; i++) {
+    let pos = elms[i].pos_middle_1d;
+    if (elms[i].velocity) {
+      pos -= elms[i].velocity*TIME_STEP;
+    }
+    if(pos < elms[0].pos_middle_1d && !elms[0].neighbours[0]) {pos = elms[0].pos_middle_1d;}
+    if(pos > elms[l - 1].pos_middle_1d && !elms[l - 1].neighbours[1]) {pos = elms[l - 1].pos_middle_1d;}
+    // try to work out where this pos sits in terms of element 1d positions (i.e. which two elements is it between?)
+    let ip = ["",""];
+    for (let j = 0; j < l; j++) {
+      if (pos > elms[j].pos_middle_1d) {
+        ip[0] = elms[j];
+      } else if (pos < elms[j].pos_middle_1d) {
+        ip[1] = elms[j];
+        break;
+      } else {
+        ip = [elms[j], elms[j]];
+        break;
+      }
+    }
+
+    // work out pos as a percentage of distance between two nearest elms
+    let frac = 0;
+    if(ip[1] != ip[0]){
+      frac = (pos - ip[0].pos_middle_1d)/(ip[1].pos_middle_1d - ip[0].pos_middle_1d);
+    }
+    let new_rho = ip[0].rho + frac*(ip[1].rho - ip[0].rho);
+    new_densities.push(new_rho);
+
+  }
+  return new_densities;
+}
+
 
 let elm_container = document.getElementsByClassName('elm_container')[0];
 
@@ -343,6 +378,7 @@ for(let i = 0, l = 11; i < l; i++) {
     diameter: 0.064, // m
     elm_length: 0.1, // m
     pressure: PR_W, //Pa
+    velocity: 0, //ms^-1
     type: 'simple',
 
     neighbours: ["",""],
@@ -352,6 +388,15 @@ for(let i = 0, l = 11; i < l; i++) {
   }
 
   elm_list.push(elm);
+
+
+  if(i == 0) {
+    elm.pos_start_1d = 0;
+  } else {
+    elm.pos_start_1d = elm_list[i-1].pos_end_1d;
+  }
+  elm.pos_middle_1d = elm.pos_start_1d + 0.5*elm.elm_length;
+  elm.pos_end_1d = elm.pos_start_1d + elm.elm_length;
 
   if (i >= l/2) {
     elm.angle *= -1;
@@ -400,7 +445,7 @@ for (let i = 0, l = elm_list.length; i < l; i++) {
 // TESTING ONLY
 let elm_divs = document.getElementsByClassName('elm');
 function elm_div_opac (elm, div) {
-  let op = Math.round(100*(elm.pressure - PR_W + 20000)/(PR_W));
+  let op = Math.round(100*(elm.pressure - PR_W)/(PR_W));
   div.style.backgroundColor = 'hsl( 280, 100%, ' + op + '%)';
 }
 
@@ -416,7 +461,10 @@ middle_elm.area = findElementCrossSectionalArea(middle_elm);
 middle_elm.volume = findElementVolume(middle_elm);
 middle_elm.mass = findElementMass(middle_elm);
 middle_elm.rho = middle_elm.mass/middle_elm.volume;
+middle_elm.velocity = 0;
+
 //////////////////////
+
 
 
 function visualise() {
@@ -468,6 +516,14 @@ function visualise() {
     }
     */
     // recalculate densities, pressures, ready for the next cycle!
+    for (let i = 0, l = elm_list.length; i < l; i++) {
+      let elm = elm_list[i];
+      elm.rho = new_rhos[i];
+      //elm.pressure = newPressureFromDensity(elm.rho, RHO_W, PR_W, K_W);
+    }
+
+    new_rhos = advect(elm_list);
+
     for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
       elm.rho = new_rhos[i];
