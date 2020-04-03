@@ -121,160 +121,155 @@ function calculatePressureDiffs (elm) {
   return dP;
 }
 
-function calculatePressureForces (elm) {
-  let dP = calculatePressureDiffs(elm);
-  let forces = [0, 0];
+function calculatePressureForce (elm) {
+  let force = 0;
   for (let i = 0, l = elm.neighbours.length; i < l; i++) {
+    let sign = 1;
+    if (i == 1) {sign = -1;}
     if (elm.neighbours[i]) {
         let neighbour = elm.neighbours[i];
         if (neighbour.type == 'simple') {
-          forces[i] = dP[i]*Math.min(elm.area, neighbour.area);
+          force += sign*(neighbour.pressure)*Math.min(elm.area, neighbour.area);
         }
     } else {
       // console.log('no neighbour on ' + i + ' side');
-      forces[i] += 0;
+      force += sign*elm.pressure*elm.area;
     }
   }
-  return forces;
+  return force;
 }
 
-function calculateGravForces (elm) {
-  let Fg = -1*GRAV_ACCN*(elm.mass/2)*elm.directionSine;
-  let forces = [Fg, Fg];
-  return forces;
+function calculateGravForce (elm) {
+  let Fg = -1*GRAV_ACCN*(elm.mass)*elm.directionSine;
+  return Fg;
 }
 
-function calculateFrictionForces (elm) {
-  let forces = [0, 0];
-  //force is proportional to the square of velocity, inversely proportional to diameter
-  for (let i = 0, l = elm.momentum.length; i < l; i++) {
-    if (elm.momentum[i] != 0) {
-      let momentum = elm.momentum[i];
-      let velocity = momentum/(elm.mass/2);
+function calculateFrictionForce (elm) {
+  let force = 0;
+  let velocity = elm.momentum/(elm.mass/2);
 
       //whatever happens - the friction can at most halt the flow, such that abs(momentum - fdt) >= 0
-      let fric = -1*FRIC_CONST*elm.elm_length*velocity/elm.diameter;
-      // let fric = -1*4*Math.PI*ETA_W*elm.elm_length*velocity;
-      forces[i] = fric;
-    }
-  }
-  return forces;
+      //let fric = -1*FRIC_CONST*elm.elm_length*velocity/elm.diameter;
+      let Ff = -1*FRIC_CONST*4*Math.PI*ETA_W*elm.elm_length*velocity;
+      force = Ff;
+
+  return force;
 }
 
-
-function calculateOutflow (elm, momentum, neighbour) {
-  let massFlow = 0;
-  if (elm.mass > 0) {
-    let velocity = momentum/(elm.mass/2); // since we're dealing with only half of an element (left or right side)
-    let area_eff = elm.area;
-    if (neighbour) {area_eff = Math.min(elm.area, neighbour.area)}
-    massFlow = Math.abs(velocity*TIME_STEP*area_eff);
-    if (massFlow > elm.mass/2) {massFlow = elm.mass/2;} // really need to dynamically break up the TIME_STEP in these circumstances
-    // basically run a series of massflow calculations on the element and its neighbours
-  } else {
-    massFlow = 0;
-  }
-  return massFlow;
-}
-
-function calculateVolumetricFlowRate (elm) {
-  let volFlowRate = [0,0];
-    let res = 8*ETA_W*(elm.elm_length/2)/(Math.PI*Math.pow(elm.diameter/2,4));
-    let dP = calculatePressureDiffs(elm);
-
-    for (let i = 0, l = volFlowRate.length; i < l; i++) {
-      volFlowRate[i] = dP[i]/res;
-      if (Math.abs(volFlowRate[i])*TIME_STEP > elm.volume/2) {volFlowRate[i] = Math.sign(volFlowRate[i])*(elm.volume/2)/TIME_STEP}
-    }
-    return volFlowRate;
-  }
-
-function packageOutflows (elm) {
-  for (let i = 0, l = elm.neighbours.length; i < l; i++) {
-    if (elm.neighbours[i]) { // if there's somewhere for the flow to go...
-      if (elm.neighbours[i].diameter > 0) {
-        let massFlow = calculateOutflow(elm, elm.momentum[i], elm.neighbours[i]);
-        if ((i == 0 && elm.momentum[i] < 0) || (i == 1 && elm.momentum[i] > 0)) {
-        // add to this element's outflow list.
-        // add to the neighbour element's inflow list.
-          elm.outflows[i] = {mass: massFlow, momentum: elm.momentum[i]*massFlow/(elm.mass/2)};
-          elm.neighbours[i].inflows[(i - 1)*(i - 1)] = elm.outflows[i];
-        }
-      }
-    }
-  }
-}
-
-function checkMassFlows (elm) {
-  // calculate the net outflow for an element.
-  // If the outflow is enough to provoke a negative pressure, scale any outbound momenta
-  // and recalculate outflows, and inflows into neigbouring elements.
-  // This means the flows must be recalculated again for the neighbours too...
-  // ...if this happens, 'checkMassFlows' again for the neighbouring elements
-  let net_outflow = 0;
-  if(elm.outflows){
-    for (let i = 0, l = elm.outflows.length; i < l; i++) {
-      if (elm.outflows[i].mass) {
-        net_outflow += elm.outflows[i].mass;
-      }
-      if (elm.inflows[i].mass) {
-        net_outflow -= elm.inflows[i].mass;
-      }
-    }
-  }
-
-  // console.log(net_outflow);
-  if (net_outflow > 0 && (elm.mass - net_outflow)/elm.volume < RHO_Crit_W) {
-    //work out how much mass flow there should have been to get to just above RHO_Crit_W
-    let mass_critical = RHO_Crit_W*elm.volume;
-    let massFlow_max = elm.mass - mass_critical;
-    // console.log('mf_max = ' + massFlow_max);
-
-    let scale_factor = massFlow_max/(net_outflow);
-    //console.log(scale_factor);
-    for (let i = 0, l = elm.momentum.length; i < l; i++) {
-      if(elm.momentum[i] < 0 && i == 0 || elm.momentum[i] > 0 && i == 1) {
-        //console.log(elm.momentum[i]);
-        elm.momentum[i] = scale_factor*elm.momentum[i];
-        //console.log(elm.momentum[i]);
-      }
-    }
-    elm.outflows = ['', ''];
-    packageOutflows(elm);
-    for (let i = 0, l = elm.neighbours.length; i < l; i++) {
-      checkMassFlows(elm.neighbours[i]);
-    }
-    //reduce the momenta in each direction by an appropriate percentage
-    //repackage the outflows and neighbour inflows (recurse to this function)
-  }
-}
-
-
-function resolveMassFlows (elm) {
-  for (let i = 0, l = elm.inflows.length; i < l; i++) {
-    let infl = elm.inflows;
-    let outfl = elm.outflows;
-
-    if (infl[i].mass > 0) {elm.mass += infl[i].mass;}
-    if (outfl[i].mass > 0) {elm.mass -= outfl[i].mass;}
-    if (infl[i].momentum && infl[i].momentum != 0) {elm.momentum[i] += infl[i].momentum;}
-    if (outfl[i].momentum && outfl[i].momentum != 0) {elm.momentum[i] += outfl[i].momentum;}
-
-    // reset inflows & outflows
-    elm.inflows[i] = "";
-    elm.outflows[i] = "";
-  }
-  // also learn arrow notation, pls
-  function adder(total, a) {return total + a;};
-  let avgMomentum = elm.momentum.reduce(adder)/elm.momentum.length;
-   if (avgMomentum < 0 && ( !elm.neighbours[0] || elm.neighbours[0].diameter == 0) || avgMomentum > 0 && (!elm.neighbours[1] || elm.neighbours[1].diameter == 0)) {
-     avgMomentum = -1*avgMomentum;  //reflect on pipe end
-   }
-  //distribute this to each 'side' of the element
-  for (let i = 0, l = elm.momentum.length; i < l; i++) {
-    elm.momentum[i] = avgMomentum;
-  }
-}
+//
+// function calculateOutflow (elm, momentum, neighbour) {
+//   let massFlow = 0;
+//   if (elm.mass > 0) {
+//     let velocity = momentum/(elm.mass/2); // since we're dealing with only half of an element (left or right side)
+//     let area_eff = elm.area;
+//     if (neighbour) {area_eff = Math.min(elm.area, neighbour.area)}
+//     massFlow = Math.abs(velocity*TIME_STEP*area_eff);
+//     if (massFlow > elm.mass/2) {massFlow = elm.mass/2;} // really need to dynamically break up the TIME_STEP in these circumstances
+//     // basically run a series of massflow calculations on the element and its neighbours
+//   } else {
+//     massFlow = 0;
+//   }
+//   return massFlow;
+// }
+//
+// function calculateVolumetricFlowRate (elm) {
+//   let volFlowRate = [0,0];
+//     let res = 8*ETA_W*(elm.elm_length/2)/(Math.PI*Math.pow(elm.diameter/2,4));
+//     let dP = calculatePressureDiffs(elm);
+//
+//     for (let i = 0, l = volFlowRate.length; i < l; i++) {
+//       volFlowRate[i] = dP[i]/res;
+//       if (Math.abs(volFlowRate[i])*TIME_STEP > elm.volume/2) {volFlowRate[i] = Math.sign(volFlowRate[i])*(elm.volume/2)/TIME_STEP}
+//     }
+//     return volFlowRate;
+//   }
+//
+// function packageOutflows (elm) {
+//   for (let i = 0, l = elm.neighbours.length; i < l; i++) {
+//     if (elm.neighbours[i]) { // if there's somewhere for the flow to go...
+//       if (elm.neighbours[i].diameter > 0) {
+//         let massFlow = calculateOutflow(elm, elm.momentum[i], elm.neighbours[i]);
+//         if ((i == 0 && elm.momentum[i] < 0) || (i == 1 && elm.momentum[i] > 0)) {
+//         // add to this element's outflow list.
+//         // add to the neighbour element's inflow list.
+//           elm.outflows[i] = {mass: massFlow, momentum: elm.momentum[i]*massFlow/(elm.mass/2)};
+//           elm.neighbours[i].inflows[(i - 1)*(i - 1)] = elm.outflows[i];
+//         }
+//       }
+//     }
+//   }
+// }
+//
+// function checkMassFlows (elm) {
+//   // calculate the net outflow for an element.
+//   // If the outflow is enough to provoke a negative pressure, scale any outbound momenta
+//   // and recalculate outflows, and inflows into neigbouring elements.
+//   // This means the flows must be recalculated again for the neighbours too...
+//   // ...if this happens, 'checkMassFlows' again for the neighbouring elements
+//   let net_outflow = 0;
+//   if(elm.outflows){
+//     for (let i = 0, l = elm.outflows.length; i < l; i++) {
+//       if (elm.outflows[i].mass) {
+//         net_outflow += elm.outflows[i].mass;
+//       }
+//       if (elm.inflows[i].mass) {
+//         net_outflow -= elm.inflows[i].mass;
+//       }
+//     }
+//   }
+//
+//   // console.log(net_outflow);
+//   if (net_outflow > 0 && (elm.mass - net_outflow)/elm.volume < RHO_Crit_W) {
+//     //work out how much mass flow there should have been to get to just above RHO_Crit_W
+//     let mass_critical = RHO_Crit_W*elm.volume;
+//     let massFlow_max = elm.mass - mass_critical;
+//     // console.log('mf_max = ' + massFlow_max);
+//
+//     let scale_factor = massFlow_max/(net_outflow);
+//     //console.log(scale_factor);
+//     for (let i = 0, l = elm.momentum.length; i < l; i++) {
+//       if(elm.momentum[i] < 0 && i == 0 || elm.momentum[i] > 0 && i == 1) {
+//         //console.log(elm.momentum[i]);
+//         elm.momentum[i] = scale_factor*elm.momentum[i];
+//         //console.log(elm.momentum[i]);
+//       }
+//     }
+//     elm.outflows = ['', ''];
+//     packageOutflows(elm);
+//     for (let i = 0, l = elm.neighbours.length; i < l; i++) {
+//       checkMassFlows(elm.neighbours[i]);
+//     }
+//     //reduce the momenta in each direction by an appropriate percentage
+//     //repackage the outflows and neighbour inflows (recurse to this function)
+//   }
+// }
+//
+//
+// function resolveMassFlows (elm) {
+//   for (let i = 0, l = elm.inflows.length; i < l; i++) {
+//     let infl = elm.inflows;
+//     let outfl = elm.outflows;
+//
+//     if (infl[i].mass > 0) {elm.mass += infl[i].mass;}
+//     if (outfl[i].mass > 0) {elm.mass -= outfl[i].mass;}
+//     if (infl[i].momentum && infl[i].momentum != 0) {elm.momentum[i] += infl[i].momentum;}
+//     if (outfl[i].momentum && outfl[i].momentum != 0) {elm.momentum[i] += outfl[i].momentum;}
+//
+//     // reset inflows & outflows
+//     elm.inflows[i] = "";
+//     elm.outflows[i] = "";
+//   }
+//   // also learn arrow notation, pls
+//   function adder(total, a) {return total + a;};
+//   let avgMomentum = elm.momentum.reduce(adder)/elm.momentum.length;
+//    if (avgMomentum < 0 && ( !elm.neighbours[0] || elm.neighbours[0].diameter == 0) || avgMomentum > 0 && (!elm.neighbours[1] || elm.neighbours[1].diameter == 0)) {
+//      avgMomentum = -1*avgMomentum;  //reflect on pipe end
+//    }
+//   //distribute this to each 'side' of the element
+//   for (let i = 0, l = elm.momentum.length; i < l; i++) {
+//     elm.momentum[i] = avgMomentum;
+//   }
+// }
 
 
 function buildDiffusionMatrix (elms) {
@@ -378,11 +373,11 @@ for(let i = 0, l = 10; i < l; i++) {
     diameter: 0.064, // m
     elm_length: 0.1, // m
     pressure: PR_W, //Pa
-    velocity: 0, //ms^-1
     type: 'simple',
 
     neighbours: ["",""],
-    momentum: [0, 0],
+    momentum: 0,
+    velocity: 0, //ms^-1
     outflows: ["",""],
     inflows: ["",""],
   }
@@ -468,54 +463,55 @@ middle_elm.velocity = 0;
 
 
 function visualise() {
-  for (let p = 0, l = 1; p < l; p++){
-    let new_rhos = diffuse(elm_list);
-    /* for (let i = 0, l = elm_list.length; i < l; i++) {
+  for (let p = 0, l = INTERVALS; p < l; p++){
+     for (let i = 0, l = elm_list.length; i < l; i++) {
+
       let elm = elm_list[i];
 
-      let forces_p = calculatePressureForces(elm);
-      let forces_g = calculateGravForces(elm);
-      let forces_f = calculateFrictionForces(elm);
+      let force_p = calculatePressureForce(elm);
+      let force_g = calculateGravForce(elm);
+      let force_f = calculateFrictionForce(elm);
 
       // let forces_g = [0,0];
 
-      for (let j = 0; j < elm.momentum.length; j++) {
-        elm.momentum[j] += (forces_p[j] + forces_g[j])*TIME_STEP;
+        elm.momentum += (force_p + force_g)*TIME_STEP;
 
-        let momentum_old = elm.momentum[j];
+        let momentum_old = elm.momentum;
 
 
-        elm.momentum[j] += (forces_f[j])*TIME_STEP;
+        elm.momentum += (force_f)*TIME_STEP;
         //elm.momentum[j] = elm.momentum[j]*Math.pow(1 - forces_f[j], TIME_STEP);
-        if (elm.momentum[j]/momentum_old < 0) {elm.momentum[j] = 0;}
+        if (elm.momentum/momentum_old < 0) {elm.momentum = 0;}
 
-        let velocity = elm.momentum[j]/(elm.mass/2);
-        if (velocity > VELOCITY_LIMIT || velocity < -1*VELOCITY_LIMIT) {
-          velocity = Math.sign(velocity)*VELOCITY_LIMIT;
-          elm.momentum[j] = velocity*(elm.mass/2);
+        elm.velocity = elm.momentum/(elm.mass);
+        if (elm.velocity > VELOCITY_LIMIT || elm.velocity < -1*VELOCITY_LIMIT) {
+          elm.velocity = Math.sign(elm.velocity)*VELOCITY_LIMIT;
+          elm.momentum = elm.velocity*(elm.mass);
         }
-      }
+
     }
 
-    for (let i = 0, l = elm_list.length; i < l; i++) {
-      let elm = elm_list[i];
-      packageOutflows(elm);
-    }
+    // for (let i = 0, l = elm_list.length; i < l; i++) {
+    //   let elm = elm_list[i];
+    //   packageOutflows(elm);
+    // }
 
 
 
-    for (let i = 0, l = elm_list.length; i < l; i++) {
-      let elm = elm_list[i];
-      checkMassFlows(elm);
-    }
+    // for (let i = 0, l = elm_list.length; i < l; i++) {
+    //   let elm = elm_list[i];
+    //   checkMassFlows(elm);
+    // }
 
-    for (let i = 0, l = elm_list.length; i < l; i++) {
-      let elm = elm_list[i];
+    // for (let i = 0, l = elm_list.length; i < l; i++) {
+    //   let elm = elm_list[i];
+    //
+    //   resolveMassFlows(elm);
+    // }
 
-      resolveMassFlows(elm);
-    }
-    */
     // recalculate densities, pressures, ready for the next cycle!
+    let new_rhos = diffuse(elm_list);
+
     for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
       elm.rho = new_rhos[i];
@@ -527,7 +523,7 @@ function visualise() {
     for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
       elm.rho = new_rhos[i];
-      elm.pressure = newPressureFromDensity(elm.rho, RHO_W, PR_W, K_W);
+      //elm.pressure = newPressureFromDensity(elm.rho, RHO_W, PR_W, K_W);
     }
 }
   for (let i = 0, l = elm_list.length; i < l; i++) {
