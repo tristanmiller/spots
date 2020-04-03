@@ -67,14 +67,14 @@ const RHO_W = 997.0; // kg/m^3
 const PR_W = 1.015e5; // Pa
 const MU_W = 1.787e-6; //m^2/s
 const ETA_W = 8.9e-4; //Pa.s
-const TIME_STEP = 0.0001; // seconds
+const TIME_STEP = 0.01; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 2 ;
-const RESTRICTION_DIAMETER = 0.01;
+const RESTRICTION_DIAMETER = 0.064;
 const VELOCITY_LIMIT = 33; //ms^-1
-const DIFFUSION_RATE = 1000 //TEMPORARY for testing GS-Algorithm
+const DIFFUSION_RATE = 0.1//TEMPORARY for testing GS-Algorithm
 
 function newDensityFromPressure (pr, pr_ref, rho_ref, K) {
   // let rho_new = rho_ref/(1 - (pr - pr_ref)/K);
@@ -278,7 +278,7 @@ function resolveMassFlows (elm) {
 
 
 function buildDiffusionMatrix (elms) {
-    let a = DIFFUSION_RATE*TIME_STEP;
+    let a = DIFFUSION_RATE*TIME_STEP*elms.length/elms[0].elm_length;
     let A = [];
     for (let i = 0, l = elms.length; i < l; i++) {
       A.push([]);
@@ -369,7 +369,7 @@ let elm_container = document.getElementsByClassName('elm_container')[0];
 //create a list of elements
 let elm_list = [];
 
-for(let i = 0, l = 11; i < l; i++) {
+for(let i = 0, l = 10; i < l; i++) {
   let elm = {
     pos_start: {x: 0, z: 0},
     pos_end: {x: 0, z: 0},
@@ -468,7 +468,7 @@ middle_elm.velocity = 0;
 
 
 function visualise() {
-  for (let p = 0, l = INTERVALS; p < l; p++){
+  for (let p = 0, l = 1; p < l; p++){
     let new_rhos = diffuse(elm_list);
     /* for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
