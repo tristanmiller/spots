@@ -67,13 +67,14 @@ const RHO_W = 997.0; // kg/m^3
 const PR_W = 1.015e5; // Pa
 const MU_W = 1.787e-6; //m^2/s
 const ETA_W = 8.9e-4; //Pa.s
-const TIME_STEP = 0.0003; // seconds
+const TIME_STEP = 0.0001; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 2 ;
-const RESTRICTION_DIAMETER = 0.064;
+const RESTRICTION_DIAMETER = 0.01;
 const VELOCITY_LIMIT = 33; //ms^-1
+const DIFFUSION_RATE = 20000 //TEMPORARY for testing GS-Algorithm
 
 function newDensityFromPressure (pr, pr_ref, rho_ref, K) {
   // let rho_new = rho_ref/(1 - (pr - pr_ref)/K);
@@ -262,7 +263,6 @@ function resolveMassFlows (elm) {
     // reset inflows & outflows
     elm.inflows[i] = "";
     elm.outflows[i] = "";
-
   }
   // also learn arrow notation, pls
   function adder(total, a) {return total + a;};
@@ -270,8 +270,6 @@ function resolveMassFlows (elm) {
    if (avgMomentum < 0 && ( !elm.neighbours[0] || elm.neighbours[0].diameter == 0) || avgMomentum > 0 && (!elm.neighbours[1] || elm.neighbours[1].diameter == 0)) {
      avgMomentum = -1*avgMomentum;  //reflect on pipe end
    }
-
-
   //distribute this to each 'side' of the element
   for (let i = 0, l = elm.momentum.length; i < l; i++) {
     elm.momentum[i] = avgMomentum;
@@ -279,20 +277,71 @@ function resolveMassFlows (elm) {
 }
 
 
+function buildDiffusionMatrix (elms) {
+    let a = DIFFUSION_RATE*TIME_STEP;
+    let A = [];
+    for (let i = 0, l = elms.length; i < l; i++) {
+      A.push([]);
+      let thisElm = elms[i];
+      for (let j = 0; j < l; j ++) {
+        let result = 0;
+        if(i == j){
+          result += 1;
+          // for each neighbour of thisElm, add the diffused amount
+          for (let x of thisElm.neighbours){
+            if (x) {result += a*Math.min(thisElm.area, x.area);}
+          }
+          // seeing as this is symmetric between the elements concerned, could also 'pre-account' for this to save on duplication...
+          //but that's a TODO for another time
+        } else if (j == i - 1) {
+          result -= a*Math.min(thisElm.area, thisElm.neighbours[0].area);;
+        }
+        else if (j == i + 1) {
+          result -= a*Math.min(thisElm.area, thisElm.neighbours[1].area);;
+        }
+        A[i].push(result);
+      }
+
+    }
+    return A;
+}
+
+function diffuse (elms) {
+  let A = buildDiffusionMatrix(elms);
+  let new_densities = [];
+  for (let i = 0, l = elms.length; i < l; i++){
+    new_densities[i] = 0;
+  }
+  for (let k = 0; k < 10; k++) {
+    for (let i = 0, l = elms.length; i < l; i++) {
+      let rho_new = elms[i].rho;
+      if(i > 0) {
+          rho_new -= A[i][i - 1]*new_densities[i - 1];
+      }
+      if(i < l - 1) {
+          rho_new -= A[i][i + 1]*new_densities[i + 1];
+      }
+      rho_new = rho_new/A[i][i];
+      new_densities[i] = rho_new;
+    }
+  }
+  return new_densities;
+}
+
 
 let elm_container = document.getElementsByClassName('elm_container')[0];
 
 //create a list of elements
 let elm_list = [];
 
-for(let i = 0, l = 40; i < l; i++) {
+for(let i = 0, l = 11; i < l; i++) {
   let elm = {
     pos_start: {x: 0, z: 0},
     pos_end: {x: 0, z: 0},
     pos_middle: {x: 0, z: 0},
-    angle: (-1/4)*Math.PI, //radians, vertically above horizontal
+    angle: (0)*Math.PI, //radians, vertically above horizontal
     diameter: 0.064, // m
-    elm_length: 0.8, // m
+    elm_length: 0.1, // m
     pressure: PR_W, //Pa
     type: 'simple',
 
@@ -358,7 +407,7 @@ function elm_div_opac (elm, div) {
 let middle_elm = elm_list[Math.ceil(elm_list.length/2)];
 
 
-elm_list[0].pressure = 1*PR_W;
+elm_list[0].pressure = 2*PR_W;
 elm_list[0].rho = newDensityFromPressure(elm_list[0].pressure, PR_W, RHO_W, K_W);
 elm_list[0].mass = findElementMass(elm_list[0]);
 
@@ -371,9 +420,9 @@ middle_elm.rho = middle_elm.mass/middle_elm.volume;
 
 
 function visualise() {
-
   for (let p = 0, l = INTERVALS; p < l; p++){
-    for (let i = 0, l = elm_list.length; i < l; i++) {
+    let new_rhos = diffuse(elm_list);
+    /* for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
 
       let forces_p = calculatePressureForces(elm);
@@ -417,11 +466,11 @@ function visualise() {
 
       resolveMassFlows(elm);
     }
-
+    */
     // recalculate densities, pressures, ready for the next cycle!
     for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
-      elm.rho = elm.mass/elm.volume;
+      elm.rho = new_rhos[i];
       elm.pressure = newPressureFromDensity(elm.rho, RHO_W, PR_W, K_W);
     }
 }
@@ -437,4 +486,5 @@ function visualise() {
 
 // let viewport = document.getElementsByClassName('viewport')[0];
 // viewport.addEventListener('click', visualise);
+
 visualise();
