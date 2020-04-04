@@ -4,14 +4,14 @@ const RHO_W = 997.0; // kg/m^3
 const PR_W = 1.015e5; // Pa
 const MU_W = 1.787e-6; //m^2/s
 const ETA_W = 8.9e-4; //Pa.s
-const TIME_STEP = 0.001; // seconds
+const TIME_STEP = 0.01; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
-const FRIC_CONST = 2 ;
-const RESTRICTION_DIAMETER = 0.060;
+const FRIC_CONST = 0 ;
+const RESTRICTION_DIAMETER = 0.050;
 const VELOCITY_LIMIT = 33; //ms^-1
-const DIFFUSION_RATE = 10//TEMPORARY for testing GS-Algorithm
+const DIFFUSION_RATE = 0.1//TEMPORARY for testing GS-Algorithm
 
 function newDensityFromPressure (pr, pr_ref, rho_ref, K) {
   // let rho_new = rho_ref/(1 - (pr - pr_ref)/K);
@@ -138,8 +138,8 @@ function advect (elms, quantity) {
     if (elms[i].velocity) {
       pos -= elms[i].velocity*TIME_STEP;
     }
-    if(pos < elms[0].pos_middle_1d && !elms[0].neighbours[0]) {pos = elms[0].pos_middle_1d;}
-    if(pos > elms[l - 1].pos_middle_1d && !elms[l - 1].neighbours[1]) {pos = elms[l - 1].pos_middle_1d;}
+    if(pos < elms[0].pos_middle_1d) {pos = elms[0].pos_middle_1d;}
+    if(pos > elms[l - 1].pos_middle_1d) {pos = elms[l - 1].pos_middle_1d;}
     // try to work out where this pos sits in terms of element 1d positions (i.e. which two elements is it between?)
     let ip = ["",""];
     for (let j = 0; j < l; j++) {
@@ -177,9 +177,9 @@ for(let i = 0, l = 10; i < l; i++) {
     pos_start: {x: 0, z: 0},
     pos_end: {x: 0, z: 0},
     pos_middle: {x: 0, z: 0},
-    angle: (1/6)*Math.PI, //radians, vertically above horizontal
+    angle: (1/2)*Math.PI, //radians, vertically above horizontal
     diameter: 0.064, // m
-    elm_length: 0.2, // m
+    elm_length: 0.1, // m
     pressure: PR_W, //Pa
     type: 'simple',
 
@@ -202,9 +202,9 @@ for(let i = 0, l = 10; i < l; i++) {
   elm.pos_middle_1d = elm.pos_start_1d + 0.5*elm.elm_length;
   elm.pos_end_1d = elm.pos_start_1d + elm.elm_length;
 
-  if (i >= l/2) {
-    elm.angle *= -1;
-  }
+  // if (i >= l/2) {
+  //   elm.angle *= -1;
+  // }
 
   if (i > 0) {
     elm.pos_start.x = elm_list[i-1].pos_end.x;
@@ -249,16 +249,16 @@ for (let i = 0, l = elm_list.length; i < l; i++) {
 // TESTING ONLY
 let elm_divs = document.getElementsByClassName('elm');
 function elm_div_opac (elm, div) {
-  let op = Math.round(100*(elm.pressure - PR_W)/(PR_W));
+  let op = Math.round(100*(elm.pressure - PR_W)/(1.8*PR_W));
   div.style.backgroundColor = 'hsl( 280, 100%, ' + op + '%)';
 }
 
 let middle_elm = elm_list[Math.ceil(elm_list.length/2)];
 
 
-elm_list[0].pressure = 3*PR_W;
-elm_list[0].rho = newDensityFromPressure(elm_list[0].pressure, PR_W, RHO_W, K_W);
-elm_list[0].mass = findElementMass(elm_list[0]);
+elm_list[1].pressure = 10*PR_W;
+elm_list[1].rho = newDensityFromPressure(elm_list[1].pressure, PR_W, RHO_W, K_W);
+elm_list[1].mass = findElementMass(elm_list[1]);
 
 middle_elm.diameter = RESTRICTION_DIAMETER;
 middle_elm.area = findElementCrossSectionalArea(middle_elm);
@@ -294,25 +294,34 @@ function visualise() {
         //   elm.velocity = Math.sign(elm.velocity)*VELOCITY_LIMIT;
         //   elm.momentum = elm.velocity*(elm.mass);
         // }
-      // } else {elm.momentum = 0; elm.velocity = 0;}
-      if((i == 0 && elm.velocity < 0 )|| (i == l - 1 && elm.velocity > 0)) { elm.velocity *= -1;}
+    //  } else {elm.momentum = 0; elm.velocity = 0;}
+      // if((i == 0 && elm.velocity < 0 )|| (i == l - 1 && elm.velocity > 0)) { elm.velocity *= -1;}
+
     }
 
 
-    let new_vels = diffuse(elm_list, 'velocity', MU_W);
+      //
+      let new_vels = diffuse(elm_list, 'velocity', MU_W);
+      for (let i = 0, l = elm_list.length; i < l; i++) {
+        let elm = elm_list[i];
+        elm.velocity = new_vels[i];
+        if(i == 0) {elm.velocity = -1*new_vels[i+1];}
+        if(i == l - 1) {elm.velocity = -1*new_vels[i-1];}
 
-    for (let i = 0, l = elm_list.length; i < l; i++) {
-      let elm = elm_list[i];
-      elm.velocity = new_vels[i];
-    }
+        // if((i == 0)|| (i == l - 1)) { elm.velocity *= 0;}
+        elm.momentum = elm.velocity*elm.mass;
+      }
 
     new_vels = advect(elm_list, 'velocity');
 
     for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
-      elm.velocity = new_vels[i];
-      elm.momentum = elm.velocity*elm.mass;
+       elm.velocity = new_vels[i];
+      // if((i == 0)|| (i == l - 1)) { elm.velocity *= 0;}
+      if(i == 0) {elm.velocity = -1*new_vels[i+1];}
+      if(i == l - 1) {elm.velocity = -1*new_vels[i-1];}
 
+      elm.momentum = elm.velocity*elm.mass;
     }
 
 
@@ -320,16 +329,18 @@ function visualise() {
     // recalculate densities, pressures, ready for the next cycle!
 
 
-  // let new_rhos = advect(elm_list, 'rho');
-  //
-  //   for (let i = 0, l = elm_list.length; i < l; i++) {
-  //     let elm = elm_list[i];
-  //     elm.rho = new_rhos[i];
-  //     //elm.mass = elm.rho*elm.volume;
-  //     //elm.pressure = newPressureFromDensity(elm.rho, RHO_W, PR_W, K_W);
-  //   }
 
-  let  new_rhos = diffuse(elm_list, 'rho', DIFFUSION_RATE);
+
+  let new_rhos = advect(elm_list, 'rho');
+
+    for (let i = 0, l = elm_list.length; i < l; i++) {
+      let elm = elm_list[i];
+      elm.rho = new_rhos[i];
+      elm.mass = elm.rho*elm.volume;
+      elm.pressure = newPressureFromDensity(elm.rho, RHO_W, PR_W, K_W);
+    }
+
+    new_rhos = diffuse(elm_list, 'rho', DIFFUSION_RATE);
 
     for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
