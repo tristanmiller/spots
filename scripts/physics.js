@@ -97,10 +97,10 @@ function buildDiffusionMatrix (elms, diff) {
           // seeing as this is symmetric between the elements concerned, could also 'pre-account' for this to save on duplication...
           //but that's a TODO for another time
         } else if (j == i - 1) {
-          result -= a*Math.min(thisElm.area, thisElm.neighbours[0].area);;
+          result -= a*Math.min(thisElm.area, thisElm.neighbours[0].area);
         }
         else if (j == i + 1) {
-          result -= a*Math.min(thisElm.area, thisElm.neighbours[1].area);;
+          result -= a*Math.min(thisElm.area, thisElm.neighbours[1].area);
         }
         A[i].push(result);
       }
@@ -108,6 +108,10 @@ function buildDiffusionMatrix (elms, diff) {
     }
     return A;
 }
+
+
+
+
 
 function diffuse (elms, quantity, diff) {
   let A = buildDiffusionMatrix(elms, diff);
