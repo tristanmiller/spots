@@ -74,7 +74,7 @@ const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 1 ;
 const RESTRICTION_DIAMETER = 0.038;
 const VELOCITY_LIMIT = 33; //ms^-1
-const DIFFUSION_RATE = 100//TEMPORARY for testing GS-Algorithm
+const DIFFUSION_RATE = 1000//TEMPORARY for testing GS-Algorithm
 
 function newDensityFromPressure (pr, pr_ref, rho_ref, K) {
   // let rho_new = rho_ref/(1 - (pr - pr_ref)/K);
@@ -129,10 +129,11 @@ function calculatePressureForces (elm) {
     if (elm.neighbours[i]) {
         let neighbour = elm.neighbours[i];
         if (neighbour.type == 'simple') {
-          forces[i] += sign*(neighbour.pressure - elm.pressure)*Math.min(elm.area, neighbour.area);
-          // if (neighbour.area < elm.area) {
-          //    forces[i] += sign*elm.pressure*(elm.area - neighbour.area);
-          // }
+          forces[i] += sign*(neighbour.pressure)*Math.min(elm.area, neighbour.area);
+          if (neighbour.area < elm.area) {
+             forces[i] += sign*(elm.pressure*(elm.area - neighbour.area));
+          }
+          forces[i] -= sign*(elm.pressure*elm.area);
         }
     } else {
       // console.log('no neighbour on ' + i + ' side');
@@ -173,7 +174,7 @@ function calculateOutflow (elm, momentum, neighbour) {
     let area_eff = elm.area;
     if (neighbour) {area_eff = Math.min(elm.area, neighbour.area)}
     massFlow = Math.abs(velocity*TIME_STEP*area_eff);
-    if (massFlow > elm.mass/2) {massFlow = elm.mass/2;} // really need to dynamically break up the TIME_STEP in these circumstances
+  //  if (massFlow > elm.mass/2) {massFlow = elm.mass/2;} // really need to dynamically break up the TIME_STEP in these circumstances
     // basically run a series of massflow calculations on the element and its neighbours
   } else {
     massFlow = 0;
@@ -373,12 +374,12 @@ let elm_container = document.getElementsByClassName('elm_container')[0];
 //create a list of elements
 let elm_list = [];
 
-for(let i = 0, l = 10; i < l; i++) {
+for(let i = 0, l = 5; i < l; i++) {
   let elm = {
     pos_start: {x: 0, z: 0},
     pos_end: {x: 0, z: 0},
     pos_middle: {x: 0, z: 0},
-    angle: (1/2)*Math.PI, //radians, vertically above horizontal
+    angle: (0.1)*Math.PI, //radians, vertically above horizontal
     diameter: 0.064, // m
     elm_length: 0.2, // m
     pressure: PR_W, //Pa
@@ -402,9 +403,9 @@ for(let i = 0, l = 10; i < l; i++) {
   elm.pos_middle_1d = elm.pos_start_1d + 0.5*elm.elm_length;
   elm.pos_end_1d = elm.pos_start_1d + elm.elm_length;
 
-  if (i >= l/2) {
-    elm.angle *= -1;
-  }
+  // if (i >= l/2) {
+  //   elm.angle *= -1;
+  // }
 
   if (i > 0) {
     elm.pos_start.x = elm_list[i-1].pos_end.x;
@@ -472,7 +473,7 @@ middle_elm.velocity = 0;
 
 
 function visualise() {
-  for (let p = 0, l = INTERVALS; p < l; p++){
+  for (let p = 0, l = 1; p < l; p++){
 
      for (let i = 0, l = elm_list.length; i < l; i++) {
       let elm = elm_list[i];
@@ -538,7 +539,7 @@ function visualise() {
     let elm = elm_list[i];
     elm_div_opac(elm, elm_divs[i]);
     elm_divs[i].style.height = 100*elm.diameter/0.064 + '%';
-    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa';
+    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ 2*Math.round(1000*elm.momentum[1]/elm.mass)/1000 + 'm/s';
   }
 
    requestAnimationFrame (visualise);
