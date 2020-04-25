@@ -1,66 +1,3 @@
-// Simple fluid physics model for SPOTS
-//// Calculate net force on an element of fluid
-//// Accelerate the fluid
-//// Calculate mass flows
-//// Update element contents
-//// Calculate pressures
-
-//// use a 2d momentum or velocity model
-//// shouldn't require too much pythagorising as we can work in each dimension separately (aside from friction with a v^2 dependence?)
-//// this is purely to allow the net force on the fluid in an element to be calculated consistently.
-//// direction changes are handled at JUNCTIONS which simply convert directions, without themselves storing fluid
-
-//// elevation also included in model to allow for gravitational gradients
-
-//// also we can include air in the model - it can creep into an element from neighbouring elements, creating sub-elements as it does
-//// normally each type of fluid will block each other but there's a tuneable threshold for pass-through e.g. if the right conditions are met, fluids can flow past each other (bubbling)
-//// how to account for buoyancy? Or will this naturally arise in the force-balance?
-
-//CALCULATIONS
-
-/// Momentum
-
-//// dp_hydraulic = (1D vector sum of pressure-derived forces)*dt
-//// dp_grav = -dt*mg*dHeight)/(length of pipe element)
-//// dp_friction = -dt*constant*v^2*(length of pipe element)/(diameter of pipe element)  The constant will be dependent on the fluid and the element material
-
-//// dp = dp_hydraulic + dp_grav + dp_friction
-//// p = p + dp
-
-/// Mass flow
-
-//// m_out = v*A*dt*rho
-////  m_in = whatever is calculated from neighbouring elements
-
-//// P = some function of density (perhaps also on temp?)
-
-// INITIAL SCENARIO
-// This should make use of all of the basic features of the simulation
-/// An elevated water tank that can feed a system of pipes via a valve. The tank also has an air valve to prevent vacuum from forming in the top of the tank as it drains.
-/// The pipes are initially full of air. There are valves in the way of the air
-/// One of the outlets is oriented vertically so that the fluids have to be elevated to escape.
-
-
-/* AIR -> VALVE -> TANK -> VALVE(S) -> OUTLETS -> VALVE(S)
-*/
-
-
-// OBJECTS
-/// Pipe element
-//// mass (of fluid)
-//// pressure
-//// density
-//// momentum
-
-//// diameter
-//// length
-//// material (roughness)
-//// elasticity (later - for collapsible hoses)
-
-//// coordinates (3d)
-//// orientation (3d) - azimuth-altitude
-
-//// elements it is connected to
 
 const K_W = 2.2e9; // Pa
 const RHO_W = 997.0; // kg/m^3
@@ -71,11 +8,11 @@ const TIME_STEP = 0.001; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
-const FRIC_CONST = 1 ;
-const RESTRICTION_DIAMETER = 0.038;
+const FRIC_CONST = 1;
+const RESTRICTION_DIAMETER = 0.025;
 const VELOCITY_LIMIT = 33; //ms^-1
-const DIFFUSION_RATE = 1000//TEMPORARY for testing GS-Algorithm
-
+const DIFFUSION_RATE = 10;//TEMPORARY for testing GS-Algorithm
+const PIPE_ANGLE = 0.25*Math.PI;
 function newDensityFromPressure (pr, pr_ref, rho_ref, K) {
   // let rho_new = rho_ref/(1 - (pr - pr_ref)/K);
   let rho_new = rho_ref*(1 + (pr - pr_ref)/K);
@@ -145,7 +82,19 @@ function calculatePressureForces (elm) {
 
 function calculateGravForces (elm) {
   let Fg = -1*GRAV_ACCN*(elm.mass/2)*elm.directionSine;
+
+  //if there's no element 'downhill' - don't apply a grav force
+  //use elm.pos_start.z and _end.z to do this
+
+  if(elm.neighbours) {
+      if (elm.directionSine > 0 && (!elm.neighbours[0] || elm.neighbours[0].diameter == 0)) {
+        Fg = 0;
+      } else if (elm.directionSine < 0 && (!elm.neighbours[1] || elm.neighbours[1].diameter == 0)) {
+        Fg = 0;
+      }
+  }
   let forces = [Fg, Fg];
+
   return forces;
 }
 
@@ -156,7 +105,6 @@ function calculateFrictionForces (elm) {
     if (elm.momentum[i] != 0) {
       let momentum = elm.momentum[i];
       let velocity = momentum/(elm.mass/2);
-
       //whatever happens - the friction can at most halt the flow, such that abs(momentum - fdt) >= 0
       let fric = -1*FRIC_CONST*elm.elm_length*velocity/elm.diameter;
       // let fric = -1*4*Math.PI*ETA_W*elm.elm_length*velocity;
@@ -172,7 +120,7 @@ function calculateOutflow (elm, momentum, neighbour) {
   if (elm.mass > 0) {
     let velocity = momentum/(elm.mass/2); // since we're dealing with only half of an element (left or right side)
     let area_eff = elm.area;
-    if (neighbour) {area_eff = Math.min(elm.area, neighbour.area)}
+    if (neighbour) {area_eff = Math.min(elm.area, neighbour.area);}
     massFlow = Math.abs(velocity*TIME_STEP*area_eff);
   //  if (massFlow > elm.mass/2) {massFlow = elm.mass/2;} // really need to dynamically break up the TIME_STEP in these circumstances
     // basically run a series of massflow calculations on the element and its neighbours
@@ -182,17 +130,17 @@ function calculateOutflow (elm, momentum, neighbour) {
   return massFlow;
 }
 
-function calculateVolumetricFlowRate (elm) {
-  let volFlowRate = [0,0];
-    let res = 8*ETA_W*(elm.elm_length/2)/(Math.PI*Math.pow(elm.diameter/2,4));
-    let dP = calculatePressureDiffs(elm);
-
-    for (let i = 0, l = volFlowRate.length; i < l; i++) {
-      volFlowRate[i] = dP[i]/res;
-      if (Math.abs(volFlowRate[i])*TIME_STEP > elm.volume/2) {volFlowRate[i] = Math.sign(volFlowRate[i])*(elm.volume/2)/TIME_STEP}
-    }
-    return volFlowRate;
-  }
+// function calculateVolumetricFlowRate (elm) {
+//   let volFlowRate = [0,0];
+//     let res = 8*ETA_W*(elm.elm_length/2)/(Math.PI*Math.pow(elm.diameter/2,4));
+//     let dP = calculatePressureDiffs(elm);
+//
+//     for (let i = 0, l = volFlowRate.length; i < l; i++) {
+//       volFlowRate[i] = dP[i]/res;
+//       if (Math.abs(volFlowRate[i])*TIME_STEP > elm.volume/2) {volFlowRate[i] = Math.sign(volFlowRate[i])*(elm.volume/2)/TIME_STEP}
+//     }
+//     return volFlowRate;
+//   }
 
 function packageOutflows (elm) {
   for (let i = 0, l = elm.neighbours.length; i < l; i++) {
@@ -270,14 +218,15 @@ function resolveMassFlows (elm) {
     elm.outflows[i] = "";
   }
   // also learn arrow notation, pls
-  function adder(total, a) {return total + a;};
+  function adder(total, a) {return total + a;}
   let avgMomentum = elm.momentum.reduce(adder)/elm.momentum.length;
+  // console.log(avgMomentum);
    if (avgMomentum < 0 && ( !elm.neighbours[0] || elm.neighbours[0].diameter == 0) || avgMomentum > 0 && (!elm.neighbours[1] || elm.neighbours[1].diameter == 0)) {
-     avgMomentum = -1*avgMomentum;  //reflect on pipe end
+    avgMomentum = -1*avgMomentum;  //reflect on pipe end
    }
   //distribute this to each 'side' of the element
   for (let i = 0, l = elm.momentum.length; i < l; i++) {
-    elm.momentum[i] = avgMomentum;
+     elm.momentum[i] = avgMomentum;
   }
 }
 
@@ -333,40 +282,40 @@ function diffuse (elms) {
   return new_densities;
 }
 
-function advect (elms) {
-  let new_densities = [];
-  for (let i = 0, l = elms.length; i < l; i++) {
-    let pos = elms[i].pos_middle_1d;
-    if (elms[i].velocity) {
-      pos -= elms[i].velocity*TIME_STEP;
-    }
-    if(pos < elms[0].pos_middle_1d && !elms[0].neighbours[0]) {pos = elms[0].pos_middle_1d;}
-    if(pos > elms[l - 1].pos_middle_1d && !elms[l - 1].neighbours[1]) {pos = elms[l - 1].pos_middle_1d;}
-    // try to work out where this pos sits in terms of element 1d positions (i.e. which two elements is it between?)
-    let ip = ["",""];
-    for (let j = 0; j < l; j++) {
-      if (pos > elms[j].pos_middle_1d) {
-        ip[0] = elms[j];
-      } else if (pos < elms[j].pos_middle_1d) {
-        ip[1] = elms[j];
-        break;
-      } else {
-        ip = [elms[j], elms[j]];
-        break;
-      }
-    }
-
-    // work out pos as a percentage of distance between two nearest elms
-    let frac = 0;
-    if(ip[1] != ip[0]){
-      frac = (pos - ip[0].pos_middle_1d)/(ip[1].pos_middle_1d - ip[0].pos_middle_1d);
-    }
-    let new_rho = ip[0].rho + frac*(ip[1].rho - ip[0].rho);
-    new_densities.push(new_rho);
-
-  }
-  return new_densities;
-}
+// function advect (elms) {
+//   let new_densities = [];
+//   for (let i = 0, l = elms.length; i < l; i++) {
+//     let pos = elms[i].pos_middle_1d;
+//     if (elms[i].velocity) {
+//       pos -= elms[i].velocity*TIME_STEP;
+//     }
+//     if(pos < elms[0].pos_middle_1d && !elms[0].neighbours[0]) {pos = elms[0].pos_middle_1d;}
+//     if(pos > elms[l - 1].pos_middle_1d && !elms[l - 1].neighbours[1]) {pos = elms[l - 1].pos_middle_1d;}
+//     // try to work out where this pos sits in terms of element 1d positions (i.e. which two elements is it between?)
+//     let ip = ["",""];
+//     for (let j = 0; j < l; j++) {
+//       if (pos > elms[j].pos_middle_1d) {
+//         ip[0] = elms[j];
+//       } else if (pos < elms[j].pos_middle_1d) {
+//         ip[1] = elms[j];
+//         break;
+//       } else {
+//         ip = [elms[j], elms[j]];
+//         break;
+//       }
+//     }
+//
+//     // work out pos as a percentage of distance between two nearest elms
+//     let frac = 0;
+//     if(ip[1] != ip[0]){
+//       frac = (pos - ip[0].pos_middle_1d)/(ip[1].pos_middle_1d - ip[0].pos_middle_1d);
+//     }
+//     let new_rho = ip[0].rho + frac*(ip[1].rho - ip[0].rho);
+//     new_densities.push(new_rho);
+//
+//   }
+//   return new_densities;
+// }
 
 
 let elm_container = document.getElementsByClassName('elm_container')[0];
@@ -374,12 +323,12 @@ let elm_container = document.getElementsByClassName('elm_container')[0];
 //create a list of elements
 let elm_list = [];
 
-for(let i = 0, l = 5; i < l; i++) {
+for(let i = 0, l = 20; i < l; i++) {
   let elm = {
     pos_start: {x: 0, z: 0},
     pos_end: {x: 0, z: 0},
     pos_middle: {x: 0, z: 0},
-    angle: (0.1)*Math.PI, //radians, vertically above horizontal
+    angle: PIPE_ANGLE, //radians, vertically above horizontal
     diameter: 0.064, // m
     elm_length: 0.2, // m
     pressure: PR_W, //Pa
@@ -482,14 +431,12 @@ function visualise() {
       let forces_g = calculateGravForces(elm);
       let forces_f = calculateFrictionForces(elm);
 
+
+
       // let forces_g = [0,0];
 
       for (let j = 0; j < elm.momentum.length; j++) {
-        elm.momentum[j] += (forces_p[j] + forces_g[j])*TIME_STEP;
-
         let momentum_old = elm.momentum[j];
-
-
         elm.momentum[j] += (forces_f[j])*TIME_STEP;
         //elm.momentum[j] = elm.momentum[j]*Math.pow(1 - forces_f[j], TIME_STEP);
         if (elm.momentum[j]/momentum_old < 0) {elm.momentum[j] = 0;}
@@ -499,6 +446,8 @@ function visualise() {
           velocity = Math.sign(velocity)*VELOCITY_LIMIT;
           elm.momentum[j] = velocity*(elm.mass/2);
         }
+        elm.momentum[j] += (forces_p[j] + forces_g[j])*TIME_STEP;
+
       }
     }
 
@@ -516,6 +465,8 @@ function visualise() {
       let elm = elm_list[i];
 
       resolveMassFlows(elm);
+      // if(i == 3) {console.log(elm.momentum);}
+
     }
     // recalculate densities, pressures, ready for the next cycle!
 
@@ -526,12 +477,15 @@ function visualise() {
       elm.pressure = newPressureFromDensity(elm.rho, RHO_W, PR_W, K_W);
     }
 
-    let new_rho = diffuse(elm_list);
-    for (let i = 0, l = elm_list.length; i < l; i++) {
-      let elm = elm_list[i];
-      elm.rho = new_rho[i];
-      elm.pressure = newPressureFromDensity(elm.rho, RHO_W, PR_W, K_W);
-    }
+    // let new_rho = diffuse(elm_list);
+    // for (let i = 0, l = elm_list.length; i < l; i++) {
+    //   let elm = elm_list[i];
+    //   elm.rho = new_rho[i];
+    //   elm.pressure = newPressureFromDensity(elm.rho, RHO_W, PR_W, K_W);
+    //
+    // }
+
+
 
 
 }
@@ -539,13 +493,13 @@ function visualise() {
     let elm = elm_list[i];
     elm_div_opac(elm, elm_divs[i]);
     elm_divs[i].style.height = 100*elm.diameter/0.064 + '%';
-    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ 2*Math.round(1000*elm.momentum[1]/elm.mass)/1000 + 'm/s';
+    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ 2*elm.momentum[0]/elm.mass + 'm/s';
   }
 
    requestAnimationFrame (visualise);
 }
 
-// let viewport = document.getElementsByClassName('viewport')[0];
-// viewport.addEventListener('click', visualise);
+let viewport = document.getElementsByClassName('viewport')[0];
+viewport.addEventListener('click', visualise);
 
 visualise();
