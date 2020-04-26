@@ -226,7 +226,7 @@ function resolveMassFlows (elm) {
    }
   //distribute this to each 'side' of the element
   for (let i = 0, l = elm.momentum.length; i < l; i++) {
-     elm.momentum[i] = avgMomentum;
+     //elm.momentum[i] = avgMomentum;
   }
 }
 
@@ -323,7 +323,7 @@ let elm_container = document.getElementsByClassName('elm_container')[0];
 //create a list of elements
 let elm_list = [];
 
-for(let i = 0, l = 20; i < l; i++) {
+for(let i = 0, l = 3; i < l; i++) {
   let elm = {
     pos_start: {x: 0, z: 0},
     pos_end: {x: 0, z: 0},
