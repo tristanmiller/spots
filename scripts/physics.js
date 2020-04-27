@@ -14,127 +14,10 @@ const VELOCITY_LIMIT = 33; //ms^-1
 const DIFFUSION_RATE = 10;//TEMPORARY for testing GS-Algorithm
 const PIPE_ANGLE = 0.25*Math.PI;
 const MOMENTUM_THRESHOLD = 1e-8;
+const ELEMENT_LENGTH = 0.2; //metres
 
 
-function newDensityFromPressure (pr, pr_ref, rho_ref, K) {
-  // let rho_new = rho_ref/(1 - (pr - pr_ref)/K);
-  let rho_new = rho_ref*(1 + (pr - pr_ref)/K);
-  return rho_new;
-}
 
-function newPressureFromDensity (rho, rho_ref, pr_ref, K) {
-  // let pr_new = K*Math.log(rho/rho_ref);
-  let pr_new = pr_ref + K*(rho - rho_ref)/rho_ref;
-  return pr_new;
-}
-
-function findElementMass (elm) {
-  let mass = elm.rho*Math.PI*Math.pow(0.5*elm.diameter, 2)*elm.elm_length;
-  return mass;
-}
-
-function findElementCrossSectionalArea (elm) {
-  let area = Math.PI*Math.pow(0.5*elm.diameter, 2);
-  return area;
-}
-
-function findElementVolume (elm) {
-  let vol = elm.elm_length*elm.area;
-  return vol;
-}
-
-
-function calculatePressureForce (elm) {
-  let force = 0;
-  for (let i = 0, l = elm.neighbours.length; i < l; i++) {
-    let sign = 1;
-    if (i == 1) {sign = -1;}
-    if (elm.neighbours[i]) {
-        let neighbour = elm.neighbours[i];
-        if (neighbour.type == 'simple') {
-          force += sign*(neighbour.pressure)*Math.min(elm.area, neighbour.area);
-          if (neighbour.area < elm.area) {
-             force += sign*(elm.pressure*(elm.area - neighbour.area));
-          }
-        }
-    } else {
-      // console.log('no neighbour on ' + i + ' side');
-      force += sign*elm.pressure*elm.area;
-    }
-  }
-  return force;
-}
-
-function calculateGravForce (elm) {
-  let Fg = -1*GRAV_ACCN*(elm.mass)*elm.directionSine;
-
-  //if there's no element 'downhill' - don't apply a grav force
-  //use elm.pos_start.z and _end.z to do this
-  // if (!elm.neighbours[0]) {Fg = 0;}
-  // if(elm.neighbours) {
-  //     if (elm.directionSine > 0 && (!elm.neighbours[0] || elm.neighbours[0].diameter == 0)) {
-  //       Fg = 0;
-  //     } else if (elm.directionSine < 0 && (!elm.neighbours[1] || elm.neighbours[1].diameter == 0)) {
-  //       Fg = 0;
-  //     }
-  // }
-  return Fg;
-}
-
-function calculateFrictionForce (elm) {
-  let force = 0;
-  //force is proportional to the square of velocity, inversely proportional to diameter
-    if (elm.momentum != 0) {
-      let momentum = elm.momentum;
-      let velocity = momentum/(elm.mass);
-      //whatever happens - the friction can at most halt the flow, such that abs(momentum - fdt) >= 0
-      let fric = -1*FRIC_CONST*elm.elm_length*velocity/elm.diameter;
-      // let fric = -1*4*Math.PI*ETA_W*elm.elm_length*velocity;
-      force = fric;
-    }
-  return force;
-}
-
-
-function calculateOutflow (elm, momentum, neighbour) {
-  let massFlow = 0;
-  if (elm.mass > 0) {
-    let velocity = momentum/(elm.mass);
-    let area_eff = elm.area;
-    if (neighbour) {area_eff = Math.min(elm.area, neighbour.area);}
-    massFlow = velocity*TIME_STEP*area_eff;
-  //  if (massFlow > elm.mass/2) {massFlow = elm.mass/2;} // really need to dynamically break up the TIME_STEP in these circumstances
-    // basically run a series of massflow calculations on the element and its neighbours
-  } else {
-    massFlow = 0;
-  }
-  return massFlow;
-}
-
-// function calculateVolumetricFlowRate (elm) {
-//   let volFlowRate = [0,0];
-//     let res = 8*ETA_W*(elm.elm_length/2)/(Math.PI*Math.pow(elm.diameter/2,4));
-//     let dP = calculatePressureDiffs(elm);
-//
-//     for (let i = 0, l = volFlowRate.length; i < l; i++) {
-//       volFlowRate[i] = dP[i]/res;
-//       if (Math.abs(volFlowRate[i])*TIME_STEP > elm.volume/2) {volFlowRate[i] = Math.sign(volFlowRate[i])*(elm.volume/2)/TIME_STEP}
-//     }
-//     return volFlowRate;
-//   }
-
-function packageOutflows (elm) {
-  if (elm.neighbours[1]) { // if there's somewhere for the flow to go...
-    if (elm.neighbours[1].diameter > 0) {
-      let neighbour = elm.neighbours[1];
-      let massFlow = calculateOutflow(elm, elm.momentum, neighbour);
-      // add to this element's outflow list.
-      // add to the neighbour element's inflow list.
-        elm.outflow = {mass: massFlow, momentum: elm.momentum*massFlow/(elm.mass)};
-        neighbour.inflow = elm.outflow;
-    }
-  }
-}
 
 function checkMassFlows (elm) {
   // calculate the net outflow for an element.
@@ -176,29 +59,6 @@ function checkMassFlows (elm) {
 }
 
 
-function resolveMassFlows (elm) {
-
-  let infl = elm.inflow;
-  let outfl = elm.outflow;
-
-  if (infl.mass) {elm.mass += infl.mass;}
-  if (outfl.mass) {elm.mass -= outfl.mass;}
-  if (infl.momentum && infl.momentum != 0) {elm.momentum += infl.momentum;}
-  if (outfl.momentum && outfl.momentum != 0) {elm.momentum -= outfl.momentum;}
-
-  // reset inflows & outflows
-  elm.inflow = '';
-  elm.outflow = '';
-
-  // also learn arrow notation, pls
-  // function adder(total, a) {return total + a;}
-  // let avgMomentum = elm.momentum.reduce(adder)/elm.momentum.length;
-  // console.log(avgMomentum);
-   if (elm.momentum > 0 && (!elm.neighbours[1] || elm.neighbours[1].diameter == 0)) {
-    elm.momentum *= 0;  //stop or reflect on pipe end
-   }
-
-}
 
 
 function buildDiffusionMatrix (elms) {
@@ -252,40 +112,6 @@ function diffuse (elms) {
   return new_densities;
 }
 
-// function advect (elms) {
-//   let new_densities = [];
-//   for (let i = 0, l = elms.length; i < l; i++) {
-//     let pos = elms[i].pos_middle_1d;
-//     if (elms[i].velocity) {
-//       pos -= elms[i].velocity*TIME_STEP;
-//     }
-//     if(pos < elms[0].pos_middle_1d && !elms[0].neighbours[0]) {pos = elms[0].pos_middle_1d;}
-//     if(pos > elms[l - 1].pos_middle_1d && !elms[l - 1].neighbours[1]) {pos = elms[l - 1].pos_middle_1d;}
-//     // try to work out where this pos sits in terms of element 1d positions (i.e. which two elements is it between?)
-//     let ip = ["",""];
-//     for (let j = 0; j < l; j++) {
-//       if (pos > elms[j].pos_middle_1d) {
-//         ip[0] = elms[j];
-//       } else if (pos < elms[j].pos_middle_1d) {
-//         ip[1] = elms[j];
-//         break;
-//       } else {
-//         ip = [elms[j], elms[j]];
-//         break;
-//       }
-//     }
-//
-//     // work out pos as a percentage of distance between two nearest elms
-//     let frac = 0;
-//     if(ip[1] != ip[0]){
-//       frac = (pos - ip[0].pos_middle_1d)/(ip[1].pos_middle_1d - ip[0].pos_middle_1d);
-//     }
-//     let new_rho = ip[0].rho + frac*(ip[1].rho - ip[0].rho);
-//     new_densities.push(new_rho);
-//
-//   }
-//   return new_densities;
-// }
 
 function Element(diameter, length, angle, pos_start){
   this.diameter = diameter;
@@ -299,7 +125,7 @@ function Element(diameter, length, angle, pos_start){
   if (pos_start) {this.pos_start = pos_start;} else {pos_start = {x:0, z:0};}
   this.pos_end = this.findPosEnd();
   this.pos_middle = this.findPosMiddle();
-  this.pressure =  PR_W;
+  // this.pressure =  PR_W;
   this.velocity =  0; //ms^-1
   this.type =  'simple';
 
@@ -360,8 +186,65 @@ Element.prototype.findDensity = function () {
   }
 }
 
+//the following is used to update the density, then the pressure of an element
+//when the mass and/or volume has changed
+Element.prototype.update = function () {
+  this.findVolume();
+  this.findDensity();
+  this.newPressureFromDensity(PR_W, RHO_W, K_W);
+}
+
+Element.prototype.fill = function (pressure) {
+  if (pressure) {this.pressure = pressure;} else {this.pressure = PR_W;}
+  this.newDensityFromPressure(PR_W, RHO_W, K_W);
+  this.findMass();
+}
 
 
+function Pipe (diameter, pipe_length, angle, pos_start) {
+    //use Courant number to work out best element length?
+    //basically - create however many elements are needed,
+    //stitch them together with interfaces
+    let N = pipe_length/ELEMENT_LENGTH; //what happens if N is not an integer?
+    // must give priority to the specified length of the pipe.
+    // expand/contract the elements as necessary
+    //floor N, divide pipe_length by N and this is the element_length
+    N = Math.floor(N);
+    let element_length = pipe_length/N;
+    this.elements = [];
+    this.interfaces = [];
+
+    for (let i = 0; i < N; i++) {
+        // create element
+        let strt = pos_start;
+        if (i > 0) {strt = this.elements[i - 1].pos_end;}
+
+        let elm = new Element(diameter, element_length, angle, strt);
+        this.elements.push(elm);
+
+    }
+
+    for (let i = 1; i < N; i++) {
+      //create interfaces
+        let iface = new Interface([this.elements[i - 1], this.elements[i]]);
+        this.interfaces.push(iface);
+    }
+}
+
+Pipe.prototype.fill = function (pressure) {
+  for (let i = 0, l = this.elements.length; i < l; i++) {
+    this.elements[i].fill(pressure);
+  }
+}
+
+Pipe.prototype.update = function() {
+  for (let i = 0, l = this.interfaces.length; i < l; i++) {
+    this.interfaces[i].resolveMassFlows();
+  }
+  for (let i = 0, l = this.elements.length; i < l; i++) {
+    this.elements[i].update();
+  }
+}
 
 
 function Interface (elements) {
@@ -435,6 +318,7 @@ Interface.prototype.resolveMassFlows = function () {
   }
 
   this.velocity = momentum/mass;
+  if (this.velocity > VELOCITY_LIMIT || this.velocity < -1*VELOCITY_LIMIT) {this.velocity = Math.sign(this.velocity)*VELOCITY_LIMIT;}
   let massFlow = this.velocity*TIME_STEP*Math.min(elm1.area, elm2.area);
   if (this.velocity < 0) {massFlow *= elm2.rho;}
   if (this.velocity > 0) {massFlow *= elm1.rho;}
@@ -444,114 +328,21 @@ Interface.prototype.resolveMassFlows = function () {
 
 };
 
-let crom = new Element(0.064, 0.2, PIPE_ANGLE, {x:0,z:0});
-console.log(crom);
-
-let crom2 = new Element(0.064, 0.2, PIPE_ANGLE, {x:0,z:0});
-console.log(crom2);
-
-crom.pressure = PR_W;
-crom2.pressure = 1.1*PR_W;
-crom.newDensityFromPressure(PR_W, RHO_W, K_W);
-crom.findMass();
-crom2.newDensityFromPressure(PR_W, RHO_W, K_W);
-crom2.findMass();
-
-let inty = new Interface([crom,crom2]);
 
 
+let pippy = new Pipe(0.064, 3, PIPE_ANGLE, {x:0,z:0});
+pippy.fill();
+pippy.elements[0].fill(3*PR_W);
 
-console.log(inty);
-
-for(let i = 0; i < 2500; i++){
-  inty.resolveMassFlows();
-  crom.findDensity();
-  crom.newPressureFromDensity(PR_W, RHO_W, K_W);
-  crom2.findDensity();
-  crom2.newPressureFromDensity(PR_W, RHO_W, K_W);
-  console.log(crom.pressure, crom2.pressure);
-}
-
-
+console.log(pippy);
 
 
 let elm_container = document.getElementsByClassName('elm_container')[0];
-
-//create a list of elements
-let elm_list = [];
-
-for(let i = 0, l = 20; i < l; i++) {
-  let elm = {
-    pos_start: {x: 0, z: 0},
-    pos_end: {x: 0, z: 0},
-    pos_middle: {x: 0, z: 0},
-    angle: PIPE_ANGLE, //radians, vertically above horizontal
-    diameter: 0.064, // m
-    elm_length: 0.2, // m
-    pressure: PR_W, //Pa
-    velocity: 0, //ms^-1
-    type: 'simple',
-
-    neighbours: ["",""],
-    momentum: 0,
-    outflow: '',
-    inflow: '',
-  }
-
-  elm_list.push(elm);
-
-
-  if(i == 0) {
-    elm.pos_start_1d = 0;
-  } else {
-    elm.pos_start_1d = elm_list[i-1].pos_end_1d;
-  }
-  elm.pos_middle_1d = elm.pos_start_1d + 0.5*elm.elm_length;
-  elm.pos_end_1d = elm.pos_start_1d + elm.elm_length;
-
-  // if (i >= l/2) {
-  //   elm.angle *= -1;
-  // }
-
-  if (i > 0) {
-    elm.pos_start.x = elm_list[i-1].pos_end.x;
-    elm.pos_start.z = elm_list[i-1].pos_end.z;
-  }
-
-  if('angle' in elm && 'pos_start' in elm && 'elm_length' in elm ) {
-
-    elm.directionSine = Math.sin(elm.angle);
-    elm.directionCosine = Math.cos(elm.angle);
-  } else if ('pos_start' in elm && 'pos_start' in elm) {
-    let dz = elm.pos_end.z - elm.pos_start.z;
-    let dx = elm.pos_end.x - elm.pos_start.x;
-    elm.angle = Math.atan(dz/dx);
-    elm.elm_length = Math.sqrt(Math.pow(dz, 2) + Math.pow(dx, 2));
-    elm.directionSine = dz/elm.elm_length;
-    elm.directionCosine = dx/elm.elm_length;
-  }
-
-  elm.pos_end.x = elm.pos_start.x + elm.elm_length*elm.directionCosine;
-  elm.pos_end.z = elm.pos_start.z + elm.elm_length*elm.directionSine;
-
-  elm.pos_middle.x = (elm.pos_start.x + elm.pos_end.x)/2;
-  elm.pos_middle.z = (elm.pos_start.z + elm.pos_end.z)/2;
-
-  elm.rho = newDensityFromPressure(elm.pressure, PR_W, RHO_W, K_W);
-  elm.mass = findElementMass(elm);
-  elm.area = findElementCrossSectionalArea(elm);
-  elm.volume = findElementVolume(elm);
+for (let i = 0, l = pippy.elements.length; i < l; i++) {
   let elm_div = document.createElement('div');
   elm_div.className = 'elm';
   elm_container.appendChild(elm_div);
 }
-
-for (let i = 0, l = elm_list.length; i < l; i++) {
-  let elm = elm_list[i];
-  if (i != 0) {elm.neighbours[0] = elm_list[i - 1];}
-  if (i != l - 1) {elm.neighbours[1] = elm_list[i + 1]};
-}
-
 
 // TESTING ONLY
 let elm_divs = document.getElementsByClassName('elm');
@@ -560,94 +351,25 @@ function elm_div_opac (elm, div) {
   div.style.backgroundColor = 'hsl( 280, 100%, ' + op + '%)';
 }
 
-let middle_elm = elm_list[Math.ceil(elm_list.length/2)];
 
 
-elm_list[0].pressure = 3*PR_W;
-elm_list[0].rho = newDensityFromPressure(elm_list[0].pressure, PR_W, RHO_W, K_W);
-elm_list[0].mass = findElementMass(elm_list[0]);
-
-middle_elm.diameter = RESTRICTION_DIAMETER;
-middle_elm.area = findElementCrossSectionalArea(middle_elm);
-middle_elm.volume = findElementVolume(middle_elm);
-middle_elm.mass = findElementMass(middle_elm);
-middle_elm.rho = middle_elm.mass/middle_elm.volume;
-// middle_elm.velocity = 1000;
-// middle_elm.momentum = middle_elm.velocity*middle_elm.mass;
-
-//////////////////////
 
 
 
 function visualise() {
-  for (let p = 0, l = INTERVALS; p < l; p++){
+  for (let p = 0, l = 1; p < l; p++){
+    pippy.update();
+    //console.log(pippy.elements[0].pressure);
 
-     for (let i = 0, l = elm_list.length; i < l; i++) {
-      let elm = elm_list[i];
+  }
 
-      let force_p = calculatePressureForce(elm);
-      let force_g = calculateGravForce(elm);
-      let force_f = calculateFrictionForce(elm);
-
-
-
-        // let velocity = elm.momentum/(elm.mass);
-        // if (velocity > VELOCITY_LIMIT || velocity < -1*VELOCITY_LIMIT) {
-        //   velocity = Math.sign(velocity)*VELOCITY_LIMIT;
-        //   elm.momentum = velocity*(elm.mass);
-        // }
-        elm.momentum += (force_p + force_g)*TIME_STEP;
-        let momentum_old = elm.momentum;
-         // elm.momentum *= 0.001;
-        elm.momentum += (force_f)*TIME_STEP;
-        if (elm.momentum/momentum_old < 0) {elm.momentum = 0;}
-        if (Math.abs(elm.momentum) < MOMENTUM_THRESHOLD) {elm.momentum = 0;}
-    }
-
-
-    for (let i = 0, l = elm_list.length; i < l; i++) {
-      let elm = elm_list[i];
-      packageOutflows(elm);
-    }
-
-    for (let i = 0, l = elm_list.length; i < l; i++) {
-      let elm = elm_list[i];
-      checkMassFlows(elm);
-    }
-
-    for (let i = 0, l = elm_list.length; i < l; i++) {
-      let elm = elm_list[i];
-
-      resolveMassFlows(elm);
-      // if(i == 3) {console.log(elm.momentum);}
-
-    }
-    // recalculate densities, pressures, ready for the next cycle!
-
-
-    for (let i = 0, l = elm_list.length; i < l; i++) {
-      let elm = elm_list[i];
-      elm.rho = elm.mass/elm.volume;
-      elm.pressure = newPressureFromDensity(elm.rho, RHO_W, PR_W, K_W);
-    }
-
-      // let new_rho = diffuse(elm_list);
-      // for (let i = 0, l = elm_list.length; i < l; i++) {
-      //   let elm = elm_list[i];
-      //   elm.rho = new_rho[i];
-      //   elm.pressure = newPressureFromDensity(elm.rho, RHO_W, PR_W, K_W);
-      //
-      // }
-
-
-
-
-}
-  for (let i = 0, l = elm_list.length; i < l; i++) {
-    let elm = elm_list[i];
+  for (let i = 0, l = pippy.elements.length; i < l; i++) {
+    let elm = pippy.elements[i];
+    let vel = 0;
+    if(pippy.interfaces[i]) {vel = pippy.interfaces[i].velocity;}
     elm_div_opac(elm, elm_divs[i]);
     elm_divs[i].style.height = 100*elm.diameter/0.064 + '%';
-    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ 2*Math.round(1000*elm.momentum/elm.mass)/1000 + 'm/s';
+    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ 2*Math.round(1000*vel)/1000 + 'm/s';
   }
 
    requestAnimationFrame (visualise);
