@@ -4,15 +4,15 @@ const RHO_W = 997.0; // kg/m^3
 const PR_W = 1.015e5; // Pa
 const MU_W = 1.787e-6; //m^2/s
 const ETA_W = 8.9e-4; //Pa.s
-const TIME_STEP = 0.001; // seconds
+const TIME_STEP = 0.0001; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
-const FRIC_CONST = 100;
+const FRIC_CONST = 1000;
 const RESTRICTION_DIAMETER = 0.025;
 const VELOCITY_LIMIT = 33; //ms^-1
 const DIFFUSION_RATE = 10;//TEMPORARY for testing GS-Algorithm
-const PIPE_ANGLE = 0.0*Math.PI;
+const PIPE_ANGLE = 0.25*Math.PI;
 const MOMENTUM_THRESHOLD = 1e-8;
 
 
@@ -296,9 +296,9 @@ function Element(diameter, length, angle, pos_start){
   this.angle = angle;
   this.directionSine = Math.sin(this.angle);
   this.directionCosine = Math.cos(this.angle);
-  this.pos_start = pos_start;
-  this.pos_end = {x: 0, z: 0};
-  this.pos_middle = {x: 0, z: 0};
+  if (pos_start) {this.pos_start = pos_start;} else {pos_start = {x:0, z:0};}
+  this.pos_end = this.findPosEnd();
+  this.pos_middle = this.findPosMiddle();
   this.pressure =  PR_W;
   this.velocity =  0; //ms^-1
   this.type =  'simple';
@@ -307,26 +307,173 @@ function Element(diameter, length, angle, pos_start){
   this.momentum = 0;
   this.outflow = '';
   this.inflow = '';
+  this.interfaces = [];
 
 }
 
 Element.prototype.findArea = function () {
   let area = Math.PI*(0.5*Math.pow(this.diameter, 2));
   return area;
-}
+};
 
 Element.prototype.findVolume = function () {
   let area = this.findArea();
   let volume = area*this.elm_length;
   return volume;
-}
+};
 
 Element.prototype.findPosEnd = function () {
+  let endX = this.pos_start.x + this.elm_length*this.directionCosine;
+  let endZ = this.pos_start.z + this.elm_length*this.directionSine;
+  let pos_end = {x: endX, z: endZ};
+  return pos_end;
+};
 
+Element.prototype.findPosMiddle = function () {
+  let midX = (this.pos_start.x + this.pos_end.x)/2;
+  let midZ = (this.pos_start.z + this.pos_end.z)/2;
+  let pos_mid = {x: midX, z: midZ};
+  return pos_mid;
+};
+
+Element.prototype.newDensityFromPressure = function (pr_ref, rho_ref, K) {
+  // let rho_new = rho_ref/(1 - (pr - pr_ref)/K);
+  let rho_new = rho_ref*(1 + (this.pressure - pr_ref)/K);
+  this.rho = rho_new;
 }
 
-let crom = new Element(0.064, 0.2, 0);
+Element.prototype.newPressureFromDensity = function (pr_ref, rho_ref, K) {
+  // let pr_new = K*Math.log(rho/rho_ref);
+  let pr_new = pr_ref + K*(this.rho - rho_ref)/rho_ref;
+  this.pressure = pr_new;
+}
+
+Element.prototype.findMass = function () {
+  let volume = this.findVolume();
+  let mass = this.rho*volume;
+  this.mass = mass;
+}
+
+Element.prototype.findDensity = function () {
+  if (this.mass > 0 && this.volume > 0) {
+    this.rho = this.mass/this.volume;
+  }
+}
+
+
+
+
+
+function Interface (elements) {
+  this.elements = elements;
+  for (let i = 0, l = this.elements.length; i < l; i++) {
+    elements[i].interfaces.push(this);
+  }
+
+  this.velocity = 0;
+}
+
+Interface.prototype.calculatePressureForce = function (elm1, elm2) {
+  //calculate the force due to pressure gradient between connected elements
+  let area = Math.min(elm1.area, elm2.area);
+  let force = area*(elm1.pressure - elm2.pressure);
+  return force;
+};
+
+Interface.prototype.calculateGravForce = function (elm1, elm2) {
+  //calculate the force due to gravity on the fluid across the interface
+  //how to cope with different element ANGLES?
+  //do a mass-weighted average of the angles (or directionSines)
+  let avgDS = 0;
+  let mass = elm1.mass + elm2.mass;
+  if (elm1.directionSine != elm2.directionSine) {
+    avgDS = (elm1.mass/mass)*elm1.directionSine + (elm2.mass/mass)*elm2.directionSine;
+  } else {
+    avgDS = elm1.directionSine;
+  }
+
+  let force = -1*avgDS*mass*GRAV_ACCN;
+  return force;
+};
+
+Interface.prototype.calculateFrictionForce = function (elm1, elm2) {
+  //calculate the force due to friction on the fluid across the interface
+  //use a length-weighted average of the diameters both elements
+  let avgDiam = 0;
+  let L = elm1.elm_length + elm2.elm_length;
+  if(elm1.elm_length != elm2.elm_length) {
+    avgDiam = (elm1.elm_length/L)*elm1.diameter + (elm2.elm_length/L)*elm2.diameter;
+  } else {
+    avgDiam = elm1.diameter;
+  }
+
+  let force = -1*FRIC_CONST*L*this.velocity/avgDiam;
+  return force;
+};
+
+Interface.prototype.calculateForce = function (elm1, elm2) {
+  let force = this.calculatePressureForce(elm1, elm2);
+  force += this.calculateGravForce(elm1, elm2);
+  return force;
+};
+
+Interface.prototype.resolveMassFlows = function () {
+  //determine forces
+  let elm1 = this.elements[0];
+  let elm2 = this.elements[1];
+  let force = this.calculateForce(elm1, elm2);
+  // console.log(elm1.pressure, elm2.pressure);
+  let mass = 0.5*(elm1.mass + elm2.mass);
+  let momentum = mass*this.velocity;
+  //apply forces to combined mass
+  //from updated velocity, work out how much mass to transfer from one element to another
+  momentum += force*TIME_STEP;
+
+  let fr_momentum = momentum + this.calculateFrictionForce(elm1, elm2)*TIME_STEP;
+  if (fr_momentum/momentum < 0) {
+    momentum = 0;
+  }
+
+  this.velocity = momentum/mass;
+  let massFlow = this.velocity*TIME_STEP*Math.min(elm1.area, elm2.area);
+  if (this.velocity < 0) {massFlow *= elm2.rho;}
+  if (this.velocity > 0) {massFlow *= elm1.rho;}
+
+  elm1.mass -= massFlow;
+  elm2.mass += massFlow;
+
+};
+
+let crom = new Element(0.064, 0.2, PIPE_ANGLE, {x:0,z:0});
 console.log(crom);
+
+let crom2 = new Element(0.064, 0.2, PIPE_ANGLE, {x:0,z:0});
+console.log(crom2);
+
+crom.pressure = PR_W;
+crom2.pressure = 1.1*PR_W;
+crom.newDensityFromPressure(PR_W, RHO_W, K_W);
+crom.findMass();
+crom2.newDensityFromPressure(PR_W, RHO_W, K_W);
+crom2.findMass();
+
+let inty = new Interface([crom,crom2]);
+
+
+
+console.log(inty);
+
+for(let i = 0; i < 2500; i++){
+  inty.resolveMassFlows();
+  crom.findDensity();
+  crom.newPressureFromDensity(PR_W, RHO_W, K_W);
+  crom2.findDensity();
+  crom2.newPressureFromDensity(PR_W, RHO_W, K_W);
+  console.log(crom.pressure, crom2.pressure);
+}
+
+
+
 
 let elm_container = document.getElementsByClassName('elm_container')[0];
 
