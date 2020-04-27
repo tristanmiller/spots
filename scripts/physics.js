@@ -9,10 +9,10 @@ const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 100;
-const RESTRICTION_DIAMETER = 0.038;
+const RESTRICTION_DIAMETER = 0.025;
 const VELOCITY_LIMIT = 33; //ms^-1
 const DIFFUSION_RATE = 10;//TEMPORARY for testing GS-Algorithm
-const PIPE_ANGLE = 0.1*Math.PI;
+const PIPE_ANGLE = 0.0*Math.PI;
 const MOMENTUM_THRESHOLD = 1e-8;
 
 
@@ -287,13 +287,53 @@ function diffuse (elms) {
 //   return new_densities;
 // }
 
+function Element(diameter, length, angle, pos_start){
+  this.diameter = diameter;
+  this.elm_length = length;
+  this.area = this.findArea();
+  this.volume = this.findVolume();
+
+  this.angle = angle;
+  this.directionSine = Math.sin(this.angle);
+  this.directionCosine = Math.cos(this.angle);
+  this.pos_start = pos_start;
+  this.pos_end = {x: 0, z: 0};
+  this.pos_middle = {x: 0, z: 0};
+  this.pressure =  PR_W;
+  this.velocity =  0; //ms^-1
+  this.type =  'simple';
+
+  this.neighbours = ['',''];
+  this.momentum = 0;
+  this.outflow = '';
+  this.inflow = '';
+
+}
+
+Element.prototype.findArea = function () {
+  let area = Math.PI*(0.5*Math.pow(this.diameter, 2));
+  return area;
+}
+
+Element.prototype.findVolume = function () {
+  let area = this.findArea();
+  let volume = area*this.elm_length;
+  return volume;
+}
+
+Element.prototype.findPosEnd = function () {
+
+}
+
+let crom = new Element(0.064, 0.2, 0);
+console.log(crom);
 
 let elm_container = document.getElementsByClassName('elm_container')[0];
 
 //create a list of elements
 let elm_list = [];
 
-for(let i = 0, l = 8; i < l; i++) {
+for(let i = 0, l = 20; i < l; i++) {
   let elm = {
     pos_start: {x: 0, z: 0},
     pos_end: {x: 0, z: 0},
