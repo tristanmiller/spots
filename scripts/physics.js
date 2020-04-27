@@ -5,14 +5,14 @@ const PR_W = 1.015e5; // Pa
 const MU_W = 1.787e-6; //m^2/s
 const ETA_W = 8.9e-4; //Pa.s
 const TIME_STEP = 0.0001; // seconds
-const INTERVALS = Math.round(1/TIME_STEP);
+const INTERVALS = 1;//Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 1000;
-const RESTRICTION_DIAMETER = 0.025;
-const VELOCITY_LIMIT = 33; //ms^-1
+const RESTRICTION_DIAMETER = 0.1;
+const VELOCITY_LIMIT = 333; //ms^-1
 const DIFFUSION_RATE = 10;//TEMPORARY for testing GS-Algorithm
-const PIPE_ANGLE = 0.25*Math.PI;
+const PIPE_ANGLE = 0.5*Math.PI;
 const MOMENTUM_THRESHOLD = 1e-8;
 const ELEMENT_LENGTH = 0.2; //metres
 
@@ -189,7 +189,8 @@ Element.prototype.findDensity = function () {
 //the following is used to update the density, then the pressure of an element
 //when the mass and/or volume has changed
 Element.prototype.update = function () {
-  this.findVolume();
+  this.area = this.findArea()
+  this.volume = this.findVolume();
   this.findDensity();
   this.newPressureFromDensity(PR_W, RHO_W, K_W);
 }
@@ -304,36 +305,41 @@ Interface.prototype.resolveMassFlows = function () {
   //determine forces
   let elm1 = this.elements[0];
   let elm2 = this.elements[1];
-  let force = this.calculateForce(elm1, elm2);
-  // console.log(elm1.pressure, elm2.pressure);
-  let mass = 0.5*(elm1.mass + elm2.mass);
-  let momentum = mass*this.velocity;
-  //apply forces to combined mass
-  //from updated velocity, work out how much mass to transfer from one element to another
-  momentum += force*TIME_STEP;
+  if(elm1.area > 0 && elm2.area > 0) {
+    let force = this.calculateForce(elm1, elm2);
+    let mass = 0.5*(elm1.mass + elm2.mass);
+    let momentum = mass*this.velocity;
+    //apply forces to combined mass
+    //from updated velocity, work out how much mass to transfer from one element to another
+    momentum += force*TIME_STEP;
 
-  let fr_momentum = momentum + this.calculateFrictionForce(elm1, elm2)*TIME_STEP;
-  if (fr_momentum/momentum < 0) {
-    momentum = 0;
+    let fr_momentum = momentum + this.calculateFrictionForce(elm1, elm2)*TIME_STEP;
+    if (fr_momentum/momentum < 0) {
+      momentum = 0;
+    }
+
+    this.velocity = momentum/mass;
+    if (this.velocity > VELOCITY_LIMIT || this.velocity < -1*VELOCITY_LIMIT) {this.velocity = Math.sign(this.velocity)*VELOCITY_LIMIT;}
+    let massFlow = this.velocity*TIME_STEP*Math.min(elm1.area, elm2.area);
+    if (this.velocity < 0) {massFlow *= elm2.rho;}
+    if (this.velocity > 0) {massFlow *= elm1.rho;}
+
+    elm1.mass -= massFlow;
+    elm2.mass += massFlow;
+  } else {
+    this.velocity = 0;
   }
-
-  this.velocity = momentum/mass;
-  if (this.velocity > VELOCITY_LIMIT || this.velocity < -1*VELOCITY_LIMIT) {this.velocity = Math.sign(this.velocity)*VELOCITY_LIMIT;}
-  let massFlow = this.velocity*TIME_STEP*Math.min(elm1.area, elm2.area);
-  if (this.velocity < 0) {massFlow *= elm2.rho;}
-  if (this.velocity > 0) {massFlow *= elm1.rho;}
-
-  elm1.mass -= massFlow;
-  elm2.mass += massFlow;
-
 };
 
 
 
-let pippy = new Pipe(0.064, 3, PIPE_ANGLE, {x:0,z:0});
+let pippy = new Pipe(0.064, 20*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
 pippy.fill();
 pippy.elements[0].fill(3*PR_W);
-
+pippy.elements[3].diameter = RESTRICTION_DIAMETER;
+pippy.elements[3].fill(PR_W);
+// pippy.elements[3].update();
+console.log(pippy.elements[3].pressure);
 console.log(pippy);
 
 
@@ -357,7 +363,7 @@ function elm_div_opac (elm, div) {
 
 
 function visualise() {
-  for (let p = 0, l = 1; p < l; p++){
+  for (let p = 0, l = INTERVALS; p < l; p++){
     pippy.update();
     //console.log(pippy.elements[0].pressure);
 
