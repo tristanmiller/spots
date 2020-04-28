@@ -5,58 +5,21 @@ const PR_W = 1.015e5; // Pa
 const MU_W = 1.787e-6; //m^2/s
 const ETA_W = 8.9e-4; //Pa.s
 const TIME_STEP = 0.0001; // seconds
-const INTERVALS = 1;//Math.round(1/TIME_STEP);
+const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 1000;
-const RESTRICTION_DIAMETER = 0.1;
-const VELOCITY_LIMIT = 333; //ms^-1
+const RESTRICTION_DIAMETER = 0.021;
+const VELOCITY_LIMIT = 100; //ms^-1
 const DIFFUSION_RATE = 10;//TEMPORARY for testing GS-Algorithm
-const PIPE_ANGLE = 0.5*Math.PI;
+const PIPE_ANGLE = 0.1*Math.PI;
 const MOMENTUM_THRESHOLD = 1e-8;
 const ELEMENT_LENGTH = 0.2; //metres
 
 
 
 
-function checkMassFlows (elm) {
-  // calculate the net outflow for an element.
-  // If the outflow is enough to provoke a negative pressure, scale any outbound momenta
-  // and recalculate outflows, and inflows into neigbouring elements.
-  // This means the flows must be recalculated again for the neighbours too...
-  // ...if this happens, 'checkMassFlows' again for the neighbouring elements
-  let net_outflow = 0;
-  if(elm.outflow){
 
-    if (elm.outflow.mass) {
-      net_outflow += elm.outflow.mass;
-    }
-    if (elm.inflow.mass) {
-      net_outflow -= elm.inflow.mass;
-    }
-
-  }
-
-  // console.log(net_outflow);
-  if (net_outflow > 0 && (elm.mass - net_outflow)/elm.volume < RHO_Crit_W) {
-    //work out how much mass flow there should have been to get to just above RHO_Crit_W
-    let mass_critical = RHO_Crit_W*elm.volume;
-    let massFlow_max = elm.mass - mass_critical;
-    // console.log('mf_max = ' + massFlow_max);
-
-    let scale_factor = massFlow_max/(net_outflow);
-    //console.log(scale_factor);
-      if(elm.momentum > 0 ) {
-        elm.momentum = scale_factor*elm.momentum;
-      }
-    elm.outflow = '';
-    packageOutflows(elm);
-    checkMassFlows(elm.neighbours[1]);
-
-    //reduce the momenta in each direction by an appropriate percentage
-    //repackage the outflows and neighbour inflows (recurse to this function)
-  }
-}
 
 
 
@@ -134,6 +97,7 @@ function Element(diameter, length, angle, pos_start){
   this.outflow = '';
   this.inflow = '';
   this.interfaces = [];
+  this.flows = [];
 
 }
 
@@ -193,6 +157,7 @@ Element.prototype.update = function () {
   this.volume = this.findVolume();
   this.findDensity();
   this.newPressureFromDensity(PR_W, RHO_W, K_W);
+  this.flows = [];
 }
 
 Element.prototype.fill = function (pressure) {
@@ -200,6 +165,49 @@ Element.prototype.fill = function (pressure) {
   this.newDensityFromPressure(PR_W, RHO_W, K_W);
   this.findMass();
 }
+
+Element.prototype.checkMassFlows = function () {
+
+  //go through list of flows
+  //work out if there is a net loss of mass
+  //if so, work out whether it results in 'too low' density
+  //if so, scale the -ve flows appropriately
+  //scale the velocities on the corresponding interfaces appropriately
+
+    let net_massFlow = 0;
+    let inflows = [];
+    let outflows = [];
+    let outflow = 0;
+    for (let i = 0, l = this.flows.length; i < l; i++) {
+      let flow = this.flows[i];
+      net_massFlow += flow[0];
+      if (flow[0] < 0) {
+        outflows.push(this.flows[i]);
+        outflow += flow[0];}
+      else {inflows.push(flow);}
+    }
+
+    let mass_critical = this.volume*RHO_Crit_W;
+
+    if(this.mass + net_massFlow < mass_critical) {
+      //find the outflow that will bring the mass to mass_critical
+      let max_outflow = mass_critical - this.mass;
+      //find a scaling factor i.e. desired/actual outflow
+      let scale_factor = max_outflow/outflow;
+      if(scale_factor < 0) {scale_factor = 0;} else if (scale_factor > 1) {scale_factor = 1;}
+      // console.log(scale_factor);
+      //scale each of the flows in the outflows list. Also scale the velocities of the corresponding interfaces
+      for (let i = 0, l = this.flows.length; i < l; i++) {
+        if(this.flows[i][0] < 0){
+          this.flows[i][0] = this.flows[i][0]*scale_factor;
+          this.flows[i][1].velocity = this.flows[i][1].velocity*scale_factor;
+          this.flows[i][1].massFlow = this.flows[i][1].massFlow*scale_factor;
+        }
+      }
+      //return true;
+    } else {return false;}
+}
+
 
 
 function Pipe (diameter, pipe_length, angle, pos_start) {
@@ -238,7 +246,21 @@ Pipe.prototype.fill = function (pressure) {
   }
 }
 
+Pipe.prototype.checkMassFlows = function() {
+  for (let i = 0, l = this.elements.length; i < l; i++) {
+    if(this.elements[i].checkMassFlows()) {
+      this.checkMassFlows();
+    }
+  }
+}
+
 Pipe.prototype.update = function() {
+  for (let i = 0, l = this.interfaces.length; i < l; i++) {
+    this.interfaces[i].calculateMassFlows();
+  }
+
+  // this.checkMassFlows();
+
   for (let i = 0, l = this.interfaces.length; i < l; i++) {
     this.interfaces[i].resolveMassFlows();
   }
@@ -255,6 +277,7 @@ function Interface (elements) {
   }
 
   this.velocity = 0;
+  this.massFlow = 0;
 }
 
 Interface.prototype.calculatePressureForce = function (elm1, elm2) {
@@ -268,12 +291,10 @@ Interface.prototype.calculateGravForce = function (elm1, elm2) {
   //calculate the force due to gravity on the fluid across the interface
   //how to cope with different element ANGLES?
   //do a mass-weighted average of the angles (or directionSines)
-  let avgDS = 0;
-  let mass = elm1.mass + elm2.mass;
+  let avgDS = elm1.directionSine;
+  let mass = 0.5*(elm1.mass + elm2.mass);
   if (elm1.directionSine != elm2.directionSine) {
-    avgDS = (elm1.mass/mass)*elm1.directionSine + (elm2.mass/mass)*elm2.directionSine;
-  } else {
-    avgDS = elm1.directionSine;
+    avgDS = (0.5*elm1.mass/mass)*elm1.directionSine + (0.5*elm2.mass/mass)*elm2.directionSine;
   }
 
   let force = -1*avgDS*mass*GRAV_ACCN;
@@ -283,15 +304,13 @@ Interface.prototype.calculateGravForce = function (elm1, elm2) {
 Interface.prototype.calculateFrictionForce = function (elm1, elm2) {
   //calculate the force due to friction on the fluid across the interface
   //use a length-weighted average of the diameters both elements
-  let avgDiam = 0;
-  let L = elm1.elm_length + elm2.elm_length;
+  let avgDiam = elm1.diameter;
+  let L = 0.5*(elm1.elm_length + elm2.elm_length);
   if(elm1.elm_length != elm2.elm_length) {
-    avgDiam = (elm1.elm_length/L)*elm1.diameter + (elm2.elm_length/L)*elm2.diameter;
-  } else {
-    avgDiam = elm1.diameter;
+    avgDiam = (0.5*elm1.elm_length/L)*elm1.diameter + (0.5*elm2.elm_length/L)*elm2.diameter;
   }
 
-  let force = -1*FRIC_CONST*L*this.velocity/avgDiam;
+  let force = -1*FRIC_CONST*L*this.velocity/Math.pow(avgDiam,2);
   return force;
 };
 
@@ -301,7 +320,8 @@ Interface.prototype.calculateForce = function (elm1, elm2) {
   return force;
 };
 
-Interface.prototype.resolveMassFlows = function () {
+
+Interface.prototype.calculateMassFlows = function () {
   //determine forces
   let elm1 = this.elements[0];
   let elm2 = this.elements[1];
@@ -320,25 +340,34 @@ Interface.prototype.resolveMassFlows = function () {
 
     this.velocity = momentum/mass;
     if (this.velocity > VELOCITY_LIMIT || this.velocity < -1*VELOCITY_LIMIT) {this.velocity = Math.sign(this.velocity)*VELOCITY_LIMIT;}
-    let massFlow = this.velocity*TIME_STEP*Math.min(elm1.area, elm2.area);
-    if (this.velocity < 0) {massFlow *= elm2.rho;}
-    if (this.velocity > 0) {massFlow *= elm1.rho;}
+    this.massFlow = this.velocity*TIME_STEP*Math.min(elm1.area, elm2.area);
+    //insert check here for excessive flow across interface
 
-    elm1.mass -= massFlow;
-    elm2.mass += massFlow;
+    if (this.velocity < 0) {this.massFlow *= elm2.rho;}
+    if (this.velocity > 0) {this.massFlow *= elm1.rho;}
+
+    elm1.flows.push([-1*this.massFlow, this]);
+    elm2.flows.push([this.massFlow, this]);
+
   } else {
     this.velocity = 0;
   }
 };
 
-
+Interface.prototype.resolveMassFlows = function () {
+  let elm1 = this.elements[0];
+  let elm2 = this.elements[1];
+  elm1.mass -= this.massFlow;
+  elm2.mass += this.massFlow;
+}
 
 let pippy = new Pipe(0.064, 20*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
 pippy.fill();
-pippy.elements[0].fill(3*PR_W);
+pippy.elements[0].fill(1*PR_W);
+pippy.elements[0].update();
 pippy.elements[3].diameter = RESTRICTION_DIAMETER;
 pippy.elements[3].fill(PR_W);
-// pippy.elements[3].update();
+pippy.elements[3].update();
 console.log(pippy.elements[3].pressure);
 console.log(pippy);
 
