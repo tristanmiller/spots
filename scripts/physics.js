@@ -8,12 +8,12 @@ const TIME_STEP = 0.0001; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
-const FRIC_CONST = 100000;
-const RESTRICTION_DIAMETER = 0.07;
+const FRIC_CONST = 10000;
+const RESTRICTION_DIAMETER = 0.01;
 const VELOCITY_LIMIT = 100; //ms^-1
 const PIPE_ANGLE = -0.25*Math.PI;
 const MOMENTUM_THRESHOLD = 1e-8;
-const ELEMENT_LENGTH = 1; //metres
+const ELEMENT_LENGTH = 0.5; //metres
 
 
 
@@ -29,14 +29,7 @@ function Element(diameter, length, angle, pos_start){
   if (pos_start) {this.pos_start = pos_start;} else {pos_start = {x:0, z:0};}
   this.pos_end = this.findPosEnd();
   this.pos_middle = this.findPosMiddle();
-  // this.pressure =  PR_W;
-  this.velocity =  0; //ms^-1
   this.type =  'simple';
-
-  this.neighbours = ['',''];
-  this.momentum = 0;
-  this.outflow = '';
-  this.inflow = '';
   this.interfaces = [];
   this.flows = [];
 
@@ -150,15 +143,11 @@ Element.prototype.checkMassFlows = function () {
 }
 
 
-
 function Pipe (diameter, pipe_length, angle, pos_start) {
-    //use Courant number to work out best element length?
     //basically - create however many elements are needed,
     //stitch them together with interfaces
     let N = pipe_length/ELEMENT_LENGTH; //what happens if N is not an integer?
-    // must give priority to the specified length of the pipe.
-    // expand/contract the elements as necessary
-    //floor N, divide pipe_length by N and this is the element_length
+    // Give priority to the specified length of the pipe - expand/contract the elements as necessary
     N = Math.floor(N);
     let element_length = pipe_length/N;
     this.elements = [];
@@ -168,10 +157,8 @@ function Pipe (diameter, pipe_length, angle, pos_start) {
         // create element
         let strt = pos_start;
         if (i > 0) {strt = this.elements[i - 1].pos_end;}
-
         let elm = new Element(diameter, element_length, angle, strt);
         this.elements.push(elm);
-
     }
 
     for (let i = 1; i < N; i++) {
