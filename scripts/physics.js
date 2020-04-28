@@ -8,31 +8,36 @@ const TIME_STEP = 0.0001; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
-const FRIC_CONST = 10000;
-const RESTRICTION_DIAMETER = 0.01;
+const FRIC_CONST = 1000;
+const RESTRICTION_DIAMETER = 0.038;
 const VELOCITY_LIMIT = 100; //ms^-1
-const PIPE_ANGLE = -0.25*Math.PI;
+const PIPE_ANGLE = 0*Math.PI;
 const MOMENTUM_THRESHOLD = 1e-8;
-const ELEMENT_LENGTH = 0.5; //metres
+const ELEMENT_LENGTH = 3; //metres
 
+let g_interfaces = [];
+let g_elements = [];
 
+function connectElements (elm1, elm2) {
+  //what about the end positions of the elements?
+  let iface = new Interface([elm1, elm2]);
+}
 
 function Element(diameter, length, angle, pos_start){
   this.diameter = diameter;
   this.elm_length = length;
   this.area = this.findArea();
   this.volume = this.findVolume();
-
   this.angle = angle;
   this.directionSine = Math.sin(this.angle);
   this.directionCosine = Math.cos(this.angle);
-  if (pos_start) {this.pos_start = pos_start;} else {pos_start = {x:0, z:0};}
+  this.pos_start = pos_start;
   this.pos_end = this.findPosEnd();
   this.pos_middle = this.findPosMiddle();
   this.type =  'simple';
   this.interfaces = [];
   this.flows = [];
-
+  g_elements.push(this);
 }
 
 Element.prototype.findArea = function () {
@@ -142,6 +147,22 @@ Element.prototype.checkMassFlows = function () {
     } else {return false;}
 }
 
+function Sink (diameter, pipe_length, angle, pos_start, pressure) {
+  Element.call(this, diameter, pipe_length, angle, pos_start);
+  this.pressure = pressure;
+  this.default_pressure = pressure;
+  this.fill(this.pressure);
+  this.type = 'sink';
+}
+
+Sink.prototype = Object.create(Element.prototype);
+
+Sink.prototype.update = function () {
+  this.fill(this.default_pressure);
+  this.flows = [];
+}
+
+
 
 function Pipe (diameter, pipe_length, angle, pos_start) {
     //basically - create however many elements are needed,
@@ -160,6 +181,12 @@ function Pipe (diameter, pipe_length, angle, pos_start) {
         let elm = new Element(diameter, element_length, angle, strt);
         this.elements.push(elm);
     }
+
+    this.startElement = this.elements[0];
+    this.endElement = this.elements[this.elements.length - 1];
+
+    this.pos_start = pos_start;
+    this.pos_end = this.endElement.pos_end;
 
     for (let i = 1; i < N; i++) {
       //create interfaces
@@ -203,9 +230,9 @@ function Interface (elements) {
   for (let i = 0, l = this.elements.length; i < l; i++) {
     elements[i].interfaces.push(this);
   }
-
   this.velocity = 0;
   this.massFlow = 0;
+  g_interfaces.push(this);
 }
 
 Interface.prototype.calculatePressureForce = function (elm1, elm2) {
@@ -299,15 +326,26 @@ let testy = pippy.elements[2];
 testy.diameter = RESTRICTION_DIAMETER;
 testy.fill(PR_W);
 testy.update();
-pippy.elements[0].fill(100*PR_W);
+pippy.elements[0].fill(PR_W);
 pippy.elements[0].update();
 
 console.log(testy.pressure);
 console.log(pippy);
 
+let sink1 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_start, 100*PR_W);
+let sink2 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, PR_W);
 
-let elm_container = document.getElementsByClassName('elm_container')[0];
+sink1.pos_start.x -= sink1.directionCosine*sink1.elm_length;
+sink1.pos_start.z -= sink1.directionSine*sink1.elm_length;
+
+sink1.pos_end = sink1.findPosEnd();
+sink1.pos_middle = sink1.findPosMiddle();
+
+connectElements(sink1, pippy.startElement);
+connectElements(pippy.endElement, sink2);
+
 for (let i = 0, l = pippy.elements.length; i < l; i++) {
+let elm_container = document.getElementsByClassName('elm_container')[0];
   let elm_div = document.createElement('div');
   elm_div.className = 'elm';
   elm_container.appendChild(elm_div);
@@ -323,12 +361,21 @@ function elm_div_opac (elm, div) {
 
 
 
-
+console.log(g_elements);
+console.log(g_interfaces);
 
 function visualise() {
   for (let p = 0, l = INTERVALS; p < l; p++){
-    pippy.update();
-    //console.log(pippy.elements[0].pressure);
+    for (let i = 0, l = g_interfaces.length; i < l; i++) {
+      g_interfaces[i].calculateMassFlows();
+      g_interfaces[i].resolveMassFlows();
+    }
+
+    for (let i = 0, l = g_elements.length; i < l; i++) {
+      g_elements[i].update();
+    }
+
+
 
   }
 
@@ -338,7 +385,7 @@ function visualise() {
     if(pippy.interfaces[i]) {vel = pippy.interfaces[i].velocity;}
     elm_div_opac(elm, elm_divs[i]);
     elm_divs[i].style.height = 100*elm.diameter/0.064 + '%';
-    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ 2*Math.round(10000*vel)/10000 + 'm/s';
+    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + vel*elm.area*1000000 +'L/s';
   }
 
    requestAnimationFrame (visualise);
