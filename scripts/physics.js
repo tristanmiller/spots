@@ -8,72 +8,13 @@ const TIME_STEP = 0.0001; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
-const FRIC_CONST = 1000;
-const RESTRICTION_DIAMETER = 0.021;
+const FRIC_CONST = 100000;
+const RESTRICTION_DIAMETER = 0.07;
 const VELOCITY_LIMIT = 100; //ms^-1
-const DIFFUSION_RATE = 10;//TEMPORARY for testing GS-Algorithm
-const PIPE_ANGLE = 0.1*Math.PI;
+const PIPE_ANGLE = -0.25*Math.PI;
 const MOMENTUM_THRESHOLD = 1e-8;
-const ELEMENT_LENGTH = 0.2; //metres
+const ELEMENT_LENGTH = 1; //metres
 
-
-
-
-
-
-
-
-
-function buildDiffusionMatrix (elms) {
-    let a = DIFFUSION_RATE*TIME_STEP*elms.length/elms[0].elm_length;
-    let A = [];
-    for (let i = 0, l = elms.length; i < l; i++) {
-      A.push([]);
-      let thisElm = elms[i];
-      for (let j = 0; j < l; j ++) {
-        let result = 0;
-        if(i == j){
-          result += 1;
-          // for each neighbour of thisElm, add the diffused amount
-          for (let x of thisElm.neighbours){
-            if (x) {result += a*Math.min(thisElm.area, x.area);}
-          }
-          // seeing as this is symmetric between the elements concerned, could also 'pre-account' for this to save on duplication...
-          //but that's a TODO for another time
-        } else if (j == i - 1) {
-          result -= a*Math.min(thisElm.area, thisElm.neighbours[0].area);;
-        }
-        else if (j == i + 1) {
-          result -= a*Math.min(thisElm.area, thisElm.neighbours[1].area);;
-        }
-        A[i].push(result);
-      }
-
-    }
-    return A;
-}
-
-function diffuse (elms) {
-  let A = buildDiffusionMatrix(elms);
-  let new_densities = [];
-  for (let i = 0, l = elms.length; i < l; i++){
-    new_densities[i] = 0;
-  }
-  for (let k = 0; k < 10; k++) {
-    for (let i = 0, l = elms.length; i < l; i++) {
-      let rho_new = elms[i].rho;
-      if(i > 0) {
-          rho_new -= A[i][i - 1]*new_densities[i - 1];
-      }
-      if(i < l - 1) {
-          rho_new -= A[i][i + 1]*new_densities[i + 1];
-      }
-      rho_new = rho_new/A[i][i];
-      new_densities[i] = rho_new;
-    }
-  }
-  return new_densities;
-}
 
 
 function Element(diameter, length, angle, pos_start){
@@ -204,7 +145,7 @@ Element.prototype.checkMassFlows = function () {
           this.flows[i][1].massFlow = this.flows[i][1].massFlow*scale_factor;
         }
       }
-      //return true;
+      return true;
     } else {return false;}
 }
 
@@ -259,7 +200,7 @@ Pipe.prototype.update = function() {
     this.interfaces[i].calculateMassFlows();
   }
 
-  // this.checkMassFlows();
+  this.checkMassFlows();
 
   for (let i = 0, l = this.interfaces.length; i < l; i++) {
     this.interfaces[i].resolveMassFlows();
@@ -292,23 +233,27 @@ Interface.prototype.calculateGravForce = function (elm1, elm2) {
   //how to cope with different element ANGLES?
   //do a mass-weighted average of the angles (or directionSines)
   let avgDS = elm1.directionSine;
-  let mass = 0.5*(elm1.mass + elm2.mass);
+  let mass = Math.min(elm1.mass, elm2.mass);//0.5*(elm1.mass + elm2.mass);
   if (elm1.directionSine != elm2.directionSine) {
     avgDS = (0.5*elm1.mass/mass)*elm1.directionSine + (0.5*elm2.mass/mass)*elm2.directionSine;
   }
 
   let force = -1*avgDS*mass*GRAV_ACCN;
   return force;
+
+  // alternatively - work out which of the two elements is uphill
+  // use that mass and directionSine for the calculation
+  //ie if elm1.pos_start.z > elm2.pos_end, use elm1 mass
 };
 
 Interface.prototype.calculateFrictionForce = function (elm1, elm2) {
   //calculate the force due to friction on the fluid across the interface
-  //use a length-weighted average of the diameters both elements
-  let avgDiam = elm1.diameter;
+  //use a length-weighted average of the diameters both elements?
+  let avgDiam = Math.min(elm1.diameter, elm2.diameter);
   let L = 0.5*(elm1.elm_length + elm2.elm_length);
-  if(elm1.elm_length != elm2.elm_length) {
-    avgDiam = (0.5*elm1.elm_length/L)*elm1.diameter + (0.5*elm2.elm_length/L)*elm2.diameter;
-  }
+  // if(elm1.elm_length != elm2.elm_length) {
+  //   avgDiam = (0.5*elm1.elm_length/L)*elm1.diameter + (0.5*elm2.elm_length/L)*elm2.diameter;
+  // }
 
   let force = -1*FRIC_CONST*L*this.velocity/Math.pow(avgDiam,2);
   return force;
@@ -361,14 +306,16 @@ Interface.prototype.resolveMassFlows = function () {
   elm2.mass += this.massFlow;
 }
 
-let pippy = new Pipe(0.064, 20*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
+let pippy = new Pipe(0.064, 10*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
 pippy.fill();
-pippy.elements[0].fill(1*PR_W);
+let testy = pippy.elements[2];
+testy.diameter = RESTRICTION_DIAMETER;
+testy.fill(PR_W);
+testy.update();
+pippy.elements[0].fill(100*PR_W);
 pippy.elements[0].update();
-pippy.elements[3].diameter = RESTRICTION_DIAMETER;
-pippy.elements[3].fill(PR_W);
-pippy.elements[3].update();
-console.log(pippy.elements[3].pressure);
+
+console.log(testy.pressure);
 console.log(pippy);
 
 
@@ -404,7 +351,7 @@ function visualise() {
     if(pippy.interfaces[i]) {vel = pippy.interfaces[i].velocity;}
     elm_div_opac(elm, elm_divs[i]);
     elm_divs[i].style.height = 100*elm.diameter/0.064 + '%';
-    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ 2*Math.round(1000*vel)/1000 + 'm/s';
+    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ 2*Math.round(10000*vel)/10000 + 'm/s';
   }
 
    requestAnimationFrame (visualise);
