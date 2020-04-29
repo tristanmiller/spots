@@ -9,11 +9,11 @@ const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 1000;
-const RESTRICTION_DIAMETER = 0.01;
-const VELOCITY_LIMIT = 100; //ms^-1
-const PIPE_ANGLE = -0.25*Math.PI;
-const MOMENTUM_THRESHOLD = 1e-8;
-const ELEMENT_LENGTH = 0.3; //metres
+const RESTRICTION_DIAMETER = 0.064;
+const VELOCITY_LIMIT = 33; //ms^-1
+const PIPE_ANGLE = 0.25*Math.PI;
+const VELOCITY_THRESHOLD = 1e-8;
+const ELEMENT_LENGTH = 1; //metres
 
 let g_interfaces = [];
 let g_elements = [];
@@ -293,14 +293,17 @@ Interface.prototype.calculateMassFlows = function () {
     momentum += force*TIME_STEP;
 
     //replace with multiplicative damping
-    let fr_momentum = momentum + this.calculateFrictionForce(elm1, elm2)*TIME_STEP;
-    if (fr_momentum/momentum < 0) {
-      momentum = 0;
-    }
+    // let fr_momentum = momentum + this.calculateFrictionForce(elm1, elm2)*TIME_STEP;
+    // if (fr_momentum/momentum < 0) {
+    //   momentum = 0;
+    // }
 
-    momentum *= 0.996;
+    momentum *= 0.999;
+    //replace with a factor that depends on pipe parameters, as a fraction of some 'reference pipe' at 'maximum flow speed'
+
 
     this.velocity = momentum/mass;
+    if (Math.abs(this.velocity) < VELOCITY_THRESHOLD) {this.velocity = 0;}
     if (this.velocity > VELOCITY_LIMIT || this.velocity < -1*VELOCITY_LIMIT) {this.velocity = Math.sign(this.velocity)*VELOCITY_LIMIT;}
     this.massFlow = this.velocity*TIME_STEP*Math.min(elm1.area, elm2.area);
     //insert check here for excessive flow across interface
@@ -335,8 +338,8 @@ pippy.elements[0].update();
 console.log(testy.pressure);
 console.log(pippy);
 
-let sink1 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_start, PR_W);
-let sink2 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 2*PR_W);
+let sink1 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_start, 1.748755*PR_W);
+let sink2 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1*PR_W);
 
 sink1.pos_start.x -= sink1.directionCosine*sink1.elm_length;
 sink1.pos_start.z -= sink1.directionSine*sink1.elm_length;
@@ -345,7 +348,7 @@ sink1.pos_end = sink1.findPosEnd();
 sink1.pos_middle = sink1.findPosMiddle();
 
 connectElements(sink1, pippy.startElement);
-//connectElements(pippy.endElement, sink2);
+connectElements(pippy.endElement, sink2);
 
 for (let i = 0, l = pippy.elements.length; i < l; i++) {
 let elm_container = document.getElementsByClassName('elm_container')[0];
