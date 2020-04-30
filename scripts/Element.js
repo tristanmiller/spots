@@ -9,6 +9,11 @@ function Element(diameter, length, angle, pos_start){
   this.pos_start = pos_start;
   this.pos_end = this.findPosEnd();
   this.pos_middle = this.findPosMiddle();
+  this.pos_start_0 = pos_start;
+  this.pos_end_0 = this.pos_end;
+  this.elm_length_0 = length;
+  this.pos = {start: this.pos_start, middle: this.pos_middle, end: this.pos_end};
+  this.pos_0 = this.pos;
   this.type =  'simple';
   this.interfaces = [];
   this.flows = [];
@@ -38,6 +43,13 @@ Element.prototype.findPosMiddle = function () {
   let midZ = (this.pos_start.z + this.pos_end.z)/2;
   let pos_mid = {x: midX, z: midZ};
   return pos_mid;
+};
+
+Element.prototype.findPosStart = function () {
+  let startX = this.pos_end.x - this.elm_length*this.directionCosine;
+  let startZ = this.pos_end.z - this.elm_length*this.directionSine;
+  let pos_start = {x: startX, z: startZ};
+  return pos_start;
 };
 
 Element.prototype.newDensityFromPressure = function (pr_ref, rho_ref, K) {
@@ -70,7 +82,7 @@ Element.prototype.update = function () {
   this.area = this.findArea()
   this.volume = this.findVolume();
   this.findDensity();
-  this.newPressureFromDensity(PR_W, RHO_W, K_W);
+  this.newPressureFromDensity(this.fluid.PR, this.fluid.RHO, this.fluid.K);
   this.flows = [];
 }
 
@@ -102,7 +114,7 @@ Element.prototype.checkMassFlows = function () {
       else {inflows.push(flow);}
     }
 
-    let mass_critical = this.volume*RHO_Crit_W;
+    let mass_critical = this.volume*this.fluid.RHO_Critical;
 
     if(this.mass + net_massFlow < mass_critical) {
       //find the outflow that will bring the mass to mass_critical

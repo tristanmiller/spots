@@ -13,7 +13,7 @@ const MU_A = 1.48e-5; //m^2/s
 const ETA_A = 1.81e-5; //Pa.s
 
 const TIME_STEP = 0.0001; // seconds
-const INTERVALS = Math.round(1/TIME_STEP);
+const INTERVALS = 10;//Math.round(1/TIME_STEP);
 const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 1; //global friction constant - should be a function of medium and hose material
 const RESTRICTION_DIAMETER = 0.064;
@@ -54,21 +54,22 @@ function Fluid (pressure_ref, rho_ref, K, mu, eta, pressure_cav) {
 const water = new Fluid (PR_W, RHO_W, K_W, MU_W, ETA_W, 3e3);
 const air = new Fluid (PR_A, RHO_A, K_A, MU_A, ETA_A);
 
-
-let pippy = new Pipe(0.064, 10*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
+let sink1 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, water.PR, air);
+let pippy = new Pipe(0.064, 3*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
 pippy.fill(water);
 let testy = pippy.elements[2];
 testy.diameter = RESTRICTION_DIAMETER;
-testy.fill(water);
+testy.fill(water, water.PR);
+console.log(testy);
 testy.update();
-pippy.elements[0].fill(water);
+pippy.elements[0].fill(air);
 pippy.elements[0].update();
 
 console.log(testy.pressure);
 console.log(pippy);
 
-let sink1 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_start, 1*PR_W, water);
-let sink2 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1*PR_W, water);
+
+let sink2 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 2*air.PR, air);
 
 sink1.pos_start.x -= sink1.directionCosine*sink1.elm_length;
 sink1.pos_start.z -= sink1.directionSine*sink1.elm_length;
@@ -79,7 +80,7 @@ sink1.pos_middle = sink1.findPosMiddle();
 connectElements(sink1, pippy.startElement);
 connectElements(pippy.endElement, sink2);
 
-for (let i = 0, l = pippy.elements.length; i < l; i++) {
+for (let i = 0, l = g_elements.length; i < l; i++) {
 let elm_container = document.getElementsByClassName('elm_container')[0];
   let elm_div = document.createElement('div');
   elm_div.className = 'elm';
@@ -90,7 +91,13 @@ let elm_container = document.getElementsByClassName('elm_container')[0];
 let elm_divs = document.getElementsByClassName('elm');
 function elm_div_opac (elm, div) {
   let op = Math.round(100*(elm.pressure - PR_W)/(PR_W));
-  div.style.backgroundColor = 'hsl( 280, 100%, ' + op + '%)';
+  op = 50;
+  if(elm.fluid == water){
+    div.style.backgroundColor = 'hsl( 280, 100%, ' + op + '%)';
+  }
+  if(elm.fluid == air) {
+    div.style.backgroundColor = 'hsl( 140, 100%, ' + op + '%)';
+  }
 }
 
 
@@ -114,8 +121,8 @@ function visualise() {
 
   }
 
-  for (let i = 0, l = pippy.elements.length; i < l; i++) {
-    let elm = pippy.elements[i];
+  for (let i = 0, l = g_elements.length; i < l; i++) {
+    let elm = g_elements[i];
     let vel = 0;
 
     //this is to facilitate flow and speed reporting - still not quite right
@@ -126,10 +133,11 @@ function visualise() {
     }
     elm_div_opac(elm, elm_divs[i]);
     elm_divs[i].style.height = 100*elm.diameter/0.064 + '%';
-    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + Math.round(1000*vel*area*1000)/1000 +'L/s';
+    elm_divs[i].style.flexGrow = elm.elm_length;
+    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + Math.round(1000*vel*area*1000)/1000 +'L/s <br>' + elm.elm_length;
   }
 
-   requestAnimationFrame (visualise);
+  requestAnimationFrame (visualise);
 }
 
 let viewport = document.getElementsByClassName('viewport')[0];
