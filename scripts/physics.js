@@ -130,7 +130,7 @@ Element.prototype.update = function () {
   this.flows = [];
 }
 
-Element.prototype.fill = function (pressure, fluid) {
+Element.prototype.fill = function (fluid, pressure) {
   this.fluid = fluid;
   if (pressure) {this.pressure = pressure;} else {this.pressure = this.fluid.PR;}
   this.newDensityFromPressure(this.fluid.PR, this.fluid.RHO, this.fluid.K);
@@ -183,14 +183,14 @@ function Sink (diameter, pipe_length, angle, pos_start, pressure, fluid) {
   Element.call(this, diameter, pipe_length, angle, pos_start);
   this.pressure = pressure;
   this.default_pressure = pressure;
-  this.fill(this.pressure, fluid);
+  this.fill(fluid, pressure);
   this.type = 'sink';
 }
 
 Sink.prototype = Object.create(Element.prototype);
 
 Sink.prototype.update = function () {
-  this.fill(this.default_pressure, this.fluid);
+  this.fill(this.fluid, this.default_pressure);
   this.flows = [];
 }
 
@@ -227,9 +227,9 @@ function Pipe (diameter, pipe_length, angle, pos_start) {
     }
 }
 
-Pipe.prototype.fill = function (pressure, fluid) {
+Pipe.prototype.fill = function (fluid, pressure) {
   for (let i = 0, l = this.elements.length; i < l; i++) {
-    this.elements[i].fill(pressure, fluid);
+    this.elements[i].fill(fluid, pressure);
   }
 }
 
@@ -358,12 +358,12 @@ Interface.prototype.resolveMassFlows = function () {
 }
 
 let pippy = new Pipe(0.064, 10*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
-pippy.fill(water.PR, water);
+pippy.fill(water);
 let testy = pippy.elements[2];
 testy.diameter = RESTRICTION_DIAMETER;
-testy.fill(water.PR, water);
+testy.fill(water);
 testy.update();
-pippy.elements[0].fill(water.PR, water);
+pippy.elements[0].fill(water);
 pippy.elements[0].update();
 
 console.log(testy.pressure);
