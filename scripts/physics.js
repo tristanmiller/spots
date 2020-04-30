@@ -4,15 +4,15 @@ const RHO_W = 997.0; // kg/m^3
 const PR_W = 1.015e5; // Pa
 const MU_W = 1.787e-6; //m^2/s
 const ETA_W = 8.9e-4; //Pa.s
-const TIME_STEP = 0.0001; // seconds
+const TIME_STEP = 0.001; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
-const FRIC_CONST = 0.1;
+const FRIC_CONST = 0.3;
 const RESTRICTION_DIAMETER = 0.01;
-const VELOCITY_LIMIT = 10000; //ms^-1
+const VELOCITY_LIMIT = 333; //ms^-1
 const PIPE_ANGLE = 0.25*Math.PI;
-const VELOCITY_THRESHOLD = 1e-8;
+const VELOCITY_THRESHOLD = 1e-6;  //how much precision for velocity?
 const ELEMENT_LENGTH = 3; //metres
 
 let g_interfaces = [];
@@ -27,7 +27,7 @@ function frictionFactor (diameter, velocity) {
   return Math.abs(velocity)/Math.pow(diameter,2);
 }
 
-const FRIC_REF = frictionFactor(0.200, 1);
+const FRIC_REF = frictionFactor(0.150, 0.5);
 
 function Element(diameter, length, angle, pos_start){
   this.diameter = diameter;
@@ -308,6 +308,7 @@ Interface.prototype.calculateMassFlows = function () {
 
     this.velocity = momentum/mass;
     if (Math.abs(this.velocity) < VELOCITY_THRESHOLD) {this.velocity = 0;}
+    this.velocity = Math.round((1/VELOCITY_THRESHOLD)*this.velocity)/(1/VELOCITY_THRESHOLD);
     if (this.velocity > VELOCITY_LIMIT || this.velocity < -1*VELOCITY_LIMIT) {this.velocity = Math.sign(this.velocity)*VELOCITY_LIMIT;}
     this.massFlow = this.velocity*TIME_STEP*Math.min(elm1.area, elm2.area);
     //insert check here for excessive flow across interface
@@ -401,7 +402,7 @@ function visualise() {
     }
     elm_div_opac(elm, elm_divs[i]);
     elm_divs[i].style.height = 100*elm.diameter/0.064 + '%';
-    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + vel*area*1000 +'L/s';
+    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + Math.round(1000*vel*area*1000)/1000 +'L/s';
   }
 
    requestAnimationFrame (visualise);
