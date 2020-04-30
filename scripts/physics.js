@@ -8,12 +8,12 @@ const TIME_STEP = 0.0001; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
 const GRAV_ACCN = 9.8; //ms^-2
-const FRIC_CONST = 1000;
-const RESTRICTION_DIAMETER = 0.064;
-const VELOCITY_LIMIT = 33; //ms^-1
+const FRIC_CONST = 0.1;
+const RESTRICTION_DIAMETER = 0.01;
+const VELOCITY_LIMIT = 10000; //ms^-1
 const PIPE_ANGLE = 0.25*Math.PI;
 const VELOCITY_THRESHOLD = 1e-8;
-const ELEMENT_LENGTH = 1; //metres
+const ELEMENT_LENGTH = 3; //metres
 
 let g_interfaces = [];
 let g_elements = [];
@@ -22,6 +22,12 @@ function connectElements (elm1, elm2) {
   //what about the end positions of the elements?
   let iface = new Interface([elm1, elm2]);
 }
+
+function frictionFactor (diameter, velocity) {
+  return Math.abs(velocity)/Math.pow(diameter,2);
+}
+
+const FRIC_REF = frictionFactor(0.200, 1);
 
 function Element(diameter, length, angle, pos_start){
   this.diameter = diameter;
@@ -238,8 +244,10 @@ function Interface (elements) {
 Interface.prototype.calculatePressureForce = function (elm1, elm2) {
   //calculate the force due to pressure gradient between connected elements
   let area = Math.min(elm1.area, elm2.area);
+  this.area = area;
   let force = area*(elm1.pressure - elm2.pressure);
   return force;
+
 };
 
 Interface.prototype.calculateGravForce = function (elm1, elm2) {
@@ -268,8 +276,7 @@ Interface.prototype.calculateFrictionForce = function (elm1, elm2) {
   // if(elm1.elm_length != elm2.elm_length) {
   //   avgDiam = (0.5*elm1.elm_length/L)*elm1.diameter + (0.5*elm2.elm_length/L)*elm2.diameter;
   // }
-
-  let force = -1*FRIC_CONST*L*this.velocity/Math.pow(avgDiam,2);
+  let force = frictionFactor(avgDiam, this.velocity);
   return force;
 };
 
@@ -292,13 +299,10 @@ Interface.prototype.calculateMassFlows = function () {
     //from updated velocity, work out how much mass to transfer from one element to another
     momentum += force*TIME_STEP;
 
-    //replace with multiplicative damping
-    // let fr_momentum = momentum + this.calculateFrictionForce(elm1, elm2)*TIME_STEP;
-    // if (fr_momentum/momentum < 0) {
-    //   momentum = 0;
-    // }
+    let fac  = FRIC_REF/this.calculateFrictionForce(elm1, elm2);
+    if (fac > 1) { fac = 1; }
 
-    momentum *= 0.999;
+    momentum *= Math.pow((fac), FRIC_CONST*TIME_STEP);
     //replace with a factor that depends on pipe parameters, as a fraction of some 'reference pipe' at 'maximum flow speed'
 
 
@@ -338,7 +342,7 @@ pippy.elements[0].update();
 console.log(testy.pressure);
 console.log(pippy);
 
-let sink1 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_start, 1.748755*PR_W);
+let sink1 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_start, 15*PR_W);
 let sink2 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1*PR_W);
 
 sink1.pos_start.x -= sink1.directionCosine*sink1.elm_length;
@@ -388,10 +392,16 @@ function visualise() {
   for (let i = 0, l = pippy.elements.length; i < l; i++) {
     let elm = pippy.elements[i];
     let vel = 0;
-    if(pippy.interfaces[i]) {vel = pippy.interfaces[i].velocity;}
+
+    //this is to facilitate flow and speed reporting - still not quite right
+    //should average the velocities across an element instead of reporting vel at one end...
+    if(pippy.interfaces[i]) {
+      vel = pippy.interfaces[i].velocity;
+      area = pippy.interfaces[i].area;
+    }
     elm_div_opac(elm, elm_divs[i]);
     elm_divs[i].style.height = 100*elm.diameter/0.064 + '%';
-    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + vel*elm.area*1000 +'L/s';
+    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + vel*area*1000 +'L/s';
   }
 
    requestAnimationFrame (visualise);
