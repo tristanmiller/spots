@@ -4,16 +4,23 @@ const RHO_W = 997.0; // kg/m^3
 const PR_W = 1.015e5; // Pa
 const MU_W = 1.787e-6; //m^2/s
 const ETA_W = 8.9e-4; //Pa.s
-const TIME_STEP = 0.001; // seconds
-const INTERVALS = Math.round(1/TIME_STEP);
 const RHO_Crit_W = 9.96955363e2; //pre-calculated critical density that produces cavitation pressure for water
+
+const K_A = 1.01e5; // Pa
+const RHO_A = 1.225; // kg/m^3
+const PR_A = 1.015e5; // Pa
+const MU_A = 1.48e-5; //m^2/s
+const ETA_A = 1.81e-5; //Pa.s
+
+const TIME_STEP = 0.0001; // seconds
+const INTERVALS = Math.round(1/TIME_STEP);
 const GRAV_ACCN = 9.8; //ms^-2
-const FRIC_CONST = 0.3;
-const RESTRICTION_DIAMETER = 0.01;
-const VELOCITY_LIMIT = 333; //ms^-1
-const PIPE_ANGLE = 0.25*Math.PI;
-const VELOCITY_THRESHOLD = 1e-6;  //how much precision for velocity?
-const ELEMENT_LENGTH = 3; //metres
+const FRIC_CONST = 1; //global friction constant - should be a function of medium and hose material
+const RESTRICTION_DIAMETER = 0.064;
+const VELOCITY_LIMIT = 1000; //ms^-1 //little hack to stop things getting too crazy
+const PIPE_ANGLE = -0.25*Math.PI;
+const VELOCITY_THRESHOLD = 1e-8;  //how much precision for velocity?
+const ELEMENT_LENGTH = 1; //metres
 
 let g_interfaces = [];
 let g_elements = [];
@@ -27,7 +34,25 @@ function frictionFactor (diameter, velocity) {
   return Math.abs(velocity)/Math.pow(diameter,2);
 }
 
-const FRIC_REF = frictionFactor(0.150, 0.5);
+const FRIC_REF = frictionFactor(0.15, 1e-5);
+
+function Fluid (pressure_ref, rho_ref, K, mu, eta, pressure_cav) {
+  this.PR = pressure_ref;
+  this.RHO = rho_ref;
+  this.K = K;
+  this.MU = mu;
+  this.ETA = eta;
+
+  if (pressure_cav) {
+    let rho_cav = this.RHO*(1 + (pressure_cav - this.PR)/this.K);
+    this.RHO_Critical = rho_cav;
+  } else {
+    this.RHO_Critical = 0;
+  }
+}
+
+const water = new Fluid (PR_W, RHO_W, K_W, MU_W, ETA_W, 3e3);
+const air = new Fluid (PR_A, RHO_A, K_A, MU_A, ETA_A);
 
 function Element(diameter, length, angle, pos_start){
   this.diameter = diameter;
@@ -105,9 +130,10 @@ Element.prototype.update = function () {
   this.flows = [];
 }
 
-Element.prototype.fill = function (pressure) {
-  if (pressure) {this.pressure = pressure;} else {this.pressure = PR_W;}
-  this.newDensityFromPressure(PR_W, RHO_W, K_W);
+Element.prototype.fill = function (pressure, fluid) {
+  this.fluid = fluid;
+  if (pressure) {this.pressure = pressure;} else {this.pressure = this.fluid.PR;}
+  this.newDensityFromPressure(this.fluid.PR, this.fluid.RHO, this.fluid.K);
   this.findMass();
 }
 
@@ -153,18 +179,18 @@ Element.prototype.checkMassFlows = function () {
     } else {return false;}
 }
 
-function Sink (diameter, pipe_length, angle, pos_start, pressure) {
+function Sink (diameter, pipe_length, angle, pos_start, pressure, fluid) {
   Element.call(this, diameter, pipe_length, angle, pos_start);
   this.pressure = pressure;
   this.default_pressure = pressure;
-  this.fill(this.pressure);
+  this.fill(this.pressure, fluid);
   this.type = 'sink';
 }
 
 Sink.prototype = Object.create(Element.prototype);
 
 Sink.prototype.update = function () {
-  this.fill(this.default_pressure);
+  this.fill(this.default_pressure, this.fluid);
   this.flows = [];
 }
 
@@ -201,9 +227,9 @@ function Pipe (diameter, pipe_length, angle, pos_start) {
     }
 }
 
-Pipe.prototype.fill = function (pressure) {
+Pipe.prototype.fill = function (pressure, fluid) {
   for (let i = 0, l = this.elements.length; i < l; i++) {
-    this.elements[i].fill(pressure);
+    this.elements[i].fill(pressure, fluid);
   }
 }
 
@@ -301,7 +327,7 @@ Interface.prototype.calculateMassFlows = function () {
 
     let fac  = FRIC_REF/this.calculateFrictionForce(elm1, elm2);
     if (fac > 1) { fac = 1; }
-
+    // console.log(fac);
     momentum *= Math.pow((fac), FRIC_CONST*TIME_STEP);
     //replace with a factor that depends on pipe parameters, as a fraction of some 'reference pipe' at 'maximum flow speed'
 
@@ -332,19 +358,19 @@ Interface.prototype.resolveMassFlows = function () {
 }
 
 let pippy = new Pipe(0.064, 10*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
-pippy.fill();
+pippy.fill(water.PR, water);
 let testy = pippy.elements[2];
 testy.diameter = RESTRICTION_DIAMETER;
-testy.fill(PR_W);
+testy.fill(water.PR, water);
 testy.update();
-pippy.elements[0].fill(PR_W);
+pippy.elements[0].fill(water.PR, water);
 pippy.elements[0].update();
 
 console.log(testy.pressure);
 console.log(pippy);
 
-let sink1 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_start, 15*PR_W);
-let sink2 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1*PR_W);
+let sink1 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_start, 1*PR_W, water);
+let sink2 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1*PR_W, water);
 
 sink1.pos_start.x -= sink1.directionCosine*sink1.elm_length;
 sink1.pos_start.z -= sink1.directionSine*sink1.elm_length;
