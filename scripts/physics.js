@@ -12,8 +12,9 @@ const PR_A = 1.015e5; // Pa
 const MU_A = 1.48e-5; //m^2/s
 const ETA_A = 1.81e-5; //Pa.s
 
-const TIME_STEP = 0.00001; // seconds
-const INTERVALS = 100;//Math.round(1/TIME_STEP);
+const TIME_STEP = 0.0001; // seconds
+const INTERVALS = Math.round(1/TIME_STEP);
+
 const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 1; //global friction constant - should be a function of medium and hose material
 const RESTRICTION_DIAMETER = 0.064;
@@ -54,22 +55,22 @@ function Fluid (pressure_ref, rho_ref, K, mu, eta, pressure_cav) {
 const water = new Fluid (PR_W, RHO_W, K_W, MU_W, ETA_W, 3e3);
 const air = new Fluid (PR_A, RHO_A, K_A, MU_A, ETA_A);
 
-let sink1 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, water.PR, air);
-let pippy = new Pipe(0.064, 3*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
+let sink1 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, 1*water.PR, air);
+let pippy = new Pipe(0.064, 10*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
 pippy.fill(water);
 let testy = pippy.elements[2];
 testy.diameter = RESTRICTION_DIAMETER;
 testy.fill(water, water.PR);
 console.log(testy);
 testy.update();
-pippy.elements[0].fill(air);
+pippy.elements[0].fill(water);
 pippy.elements[0].update();
 
 console.log(testy.pressure);
 console.log(pippy);
 
 
-let sink2 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, air.PR, water);
+let sink2 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1.4*water.PR, water);
 
 sink1.pos_start.x -= sink1.directionCosine*sink1.elm_length;
 sink1.pos_start.z -= sink1.directionSine*sink1.elm_length;
@@ -127,9 +128,9 @@ function visualise() {
 
     //this is to facilitate flow and speed reporting - still not quite right
     //should average the velocities across an element instead of reporting vel at one end...
-    if(pippy.interfaces[i]) {
-      vel = pippy.interfaces[i].velocity;
-      area = pippy.interfaces[i].area;
+    if(g_interfaces[i]) {
+      vel = g_interfaces[i].velocity;
+      area = g_interfaces[i].area;
     }
     elm_div_opac(elm, elm_divs[i]);
     elm_divs[i].style.height = 100*elm.diameter/0.064 + '%';

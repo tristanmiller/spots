@@ -93,8 +93,14 @@ Interface.prototype.calculateMassFlows = function () {
     this.massFlow = this.velocity*TIME_STEP*Math.min(elm1.area, elm2.area);
     //insert check here for excessive flow across interface
 
-    if (this.velocity < 0) {this.massFlow *= elm2.rho;}
-    if (this.velocity > 0) {this.massFlow *= elm1.rho;}
+    if (this.velocity < 0) {
+      this.massFlow *= elm2.rho;
+      if (elm2.mass + this.massFlow < 0 ) {this.massFlow = 0;}
+    }
+    if (this.velocity > 0) {
+      this.massFlow *= elm1.rho;
+      if (elm1.mass + this.massFlow < 0 ) { this.massFlow = 0;}
+    }
 
     elm1.flows.push([-1*this.massFlow, this]);
     elm2.flows.push([this.massFlow, this]);
@@ -133,7 +139,7 @@ Interface.prototype.resolveMassFlows = function () {
 
       elm_grow.elm_length += length_disp;
       elm_shrink.elm_length -= length_disp;
-      if(elm_shrink.elm_length < 0) {
+      if(elm_shrink.elm_length <= 0) {
         elm_shrink.elm_length = elm_shrink.elm_length_0;
         elm_grow.elm_length = elm_grow.elm_length_0;
         elm_shrink.pos_start = elm_shrink.pos_start_0;
