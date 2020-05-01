@@ -6,6 +6,7 @@ function Interface (elements) {
   }
   this.velocity = 0;
   this.massFlow = 0;
+  this.depth = 0;
   g_interfaces.push(this);
 }
 
@@ -66,7 +67,8 @@ Interface.prototype.calculateForce = function (elm1, elm2) {
 };
 
 
-Interface.prototype.calculateMassFlows = function () {
+Interface.prototype.calculateMassFlows = function (time_step) {
+  if(!time_step) {time_step = TIME_STEP;}
   //determine forces
   let elm1 = this.elements[0];
   let elm2 = this.elements[1];
@@ -77,12 +79,12 @@ Interface.prototype.calculateMassFlows = function () {
     //apply forces to combined mass
     //from updated velocity, work out how much mass to transfer from one element to another
 
-    momentum += force*TIME_STEP;
+    momentum += force*time_step;
 
     let fac  = FRIC_REF/this.calculateFrictionForce(elm1, elm2);
     if (fac > 1) { fac = 1; }
     // console.log(fac);
-    momentum *= Math.pow((fac), FRIC_CONST*TIME_STEP);
+    momentum *= Math.pow((fac), FRIC_CONST*time_step);
     //replace with a factor that depends on pipe parameters, as a fraction of some 'reference pipe' at 'maximum flow speed'
 
 
@@ -90,17 +92,37 @@ Interface.prototype.calculateMassFlows = function () {
     if (Math.abs(this.velocity) < VELOCITY_THRESHOLD) {this.velocity = 0;}
     this.velocity = Math.round((1/VELOCITY_THRESHOLD)*this.velocity)/(1/VELOCITY_THRESHOLD);
     if (this.velocity > VELOCITY_LIMIT || this.velocity < -1*VELOCITY_LIMIT) {this.velocity = Math.sign(this.velocity)*VELOCITY_LIMIT;}
-    this.massFlow = this.velocity*TIME_STEP*Math.min(elm1.area, elm2.area);
+    this.massFlow = this.velocity*time_step*Math.min(elm1.area, elm2.area);
     //insert check here for excessive flow across interface
-
+    //if there is excessive flow -
+    //for loop
+    // recurse but with timestep = 0.1*TIME_STEP
+    //
+    let tooMuch = false;
     if (this.velocity < 0) {
       this.massFlow *= elm2.rho;
-      if (elm2.mass + this.massFlow < 0 ) {this.massFlow = 0;}
+      if ((elm2.mass + this.massFlow)/elm2.volume < elm2.fluid.RHO_Critical) {tooMuch = true;}
     }
     if (this.velocity > 0) {
       this.massFlow *= elm1.rho;
-      if (elm1.mass + this.massFlow < 0 ) { this.massFlow = 0;}
+      if ((elm1.mass + this.massFlow)/elm1.volume < elm1.fluid.RHO_Critical ) {tooMuch = true;}
     }
+    // console.log(tooMuch);
+    if (tooMuch) {
+      if (this.depth < RECURSION_LIMIT) {
+        this.depth ++;
+        for (let i = 0; i < SUB_STEPS; i++) {
+          this.calculateMassFlows(time_step/SUB_STEPS);
+          this.resolveMassFlows();
+          elm1.update();
+          elm2.update();
+        }
+        this.depth --;
+      }
+
+    }
+
+
 
     elm1.flows.push([-1*this.massFlow, this]);
     elm2.flows.push([this.massFlow, this]);
