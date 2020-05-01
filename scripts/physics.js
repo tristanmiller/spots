@@ -12,8 +12,8 @@ const PR_A = 1.015e5; // Pa
 const MU_A = 1.48e-5; //m^2/s
 const ETA_A = 1.81e-5; //Pa.s
 
-const TIME_STEP = 0.0001; // seconds
-const INTERVALS = 10;//Math.round(1/TIME_STEP);
+const TIME_STEP = 0.00001; // seconds
+const INTERVALS = 100;//Math.round(1/TIME_STEP);
 const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 1; //global friction constant - should be a function of medium and hose material
 const RESTRICTION_DIAMETER = 0.064;
@@ -69,7 +69,7 @@ console.log(testy.pressure);
 console.log(pippy);
 
 
-let sink2 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 2*air.PR, air);
+let sink2 = new Sink(0.064, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, air.PR, water);
 
 sink1.pos_start.x -= sink1.directionCosine*sink1.elm_length;
 sink1.pos_start.z -= sink1.directionSine*sink1.elm_length;

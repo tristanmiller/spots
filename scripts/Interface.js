@@ -122,30 +122,31 @@ Interface.prototype.resolveMassFlows = function () {
     let length_disp = vol_disp/elm_shrink.area;
     //change dimensions (elm_length, pos_start, pos_end, pos_mid, redo volumes etc) of both elements connected to interface
     //don't do any of this under the following conditions
-    if(this.massFlow > 0 && elm2.type == 'sink' && elm2.elm_length == elm2.elm_length_0){
-      elm1.mass -= this.massFlow;
-    } else if(this.massFlow < 0 && elm1.type == 'sink' && elm1.elm_length == elm1.elm_length_0){
-      elm2.mass += this.massFlow;
-    } else {
     //if flow is positive and elm2 is a sink and the sink is at its original dimensions...
     //if flow is negative and elm1 is a sink and the sink is at its original dimensions...
-
-    elm_grow.elm_length += length_disp;
-    elm_shrink.elm_length -= length_disp;
-    if(elm_shrink.elm_length < 0) {
-      elm_shrink.elm_length = elm_shrink.elm_length_0;
-      elm_grow.elm_length = elm_grow.elm_length_0;
-      elm_shrink.pos_start = elm_shrink.pos_start_0;
-      elm_shrink.pos_end = elm_shrink.pos_end_0;
-      elm_shrink.pos_middle = elm_shrink.pos_middle_0;
-      elm_grow.pos_start = elm_grow.pos_start_0;
-      elm_grow.pos_end = elm_grow.pos_end_0;
-      elm_grow.pos_middle = elm_grow.pos_middle_0;
-      elm_shrink.volume = elm_shrink.findVolume();
-      elm_grow.volume = elm_grow.findVolume();
-      elm_shrink.fill(elm_grow.fluid, elm_grow.pressure);
-      elm_grow.fill(elm_grow.fluid, elm_grow.pressure);
+    if(this.massFlow >= 0 && elm2.type == 'sink' && elm2.elm_length <= elm2.elm_length_0){
+      elm1.mass -= this.massFlow;
+    } else if(this.massFlow < 0 && elm1.type == 'sink' && elm1.elm_length <= elm1.elm_length_0){
+      elm2.mass += this.massFlow;
     } else {
+
+
+      elm_grow.elm_length += length_disp;
+      elm_shrink.elm_length -= length_disp;
+      if(elm_shrink.elm_length < 0) {
+        elm_shrink.elm_length = elm_shrink.elm_length_0;
+        elm_grow.elm_length = elm_grow.elm_length_0;
+        elm_shrink.pos_start = elm_shrink.pos_start_0;
+        elm_shrink.pos_end = elm_shrink.pos_end_0;
+        elm_shrink.pos_middle = elm_shrink.pos_middle_0;
+        elm_grow.pos_start = elm_grow.pos_start_0;
+        elm_grow.pos_end = elm_grow.pos_end_0;
+        elm_grow.pos_middle = elm_grow.pos_middle_0;
+        elm_shrink.volume = elm_shrink.findVolume();
+        elm_grow.volume = elm_grow.findVolume();
+        elm_shrink.fill(elm_grow.fluid, elm_grow.pressure);
+        elm_grow.fill(elm_grow.fluid, elm_grow.pressure);
+      } else {
       if(this.massFlow > 0) {
         elm_grow.pos_end = elm_grow.findPosEnd();
         elm_grow.pos_middle = elm_grow.findPosMiddle();
