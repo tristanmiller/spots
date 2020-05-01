@@ -16,17 +16,17 @@ const TIME_STEP = 0.0001; // seconds
 const INTERVALS = Math.round(1/TIME_STEP);
 
 const GRAV_ACCN = 9.8; //ms^-2
-const FRIC_CONST = 100; //global friction constant - should be a function of medium and hose material
+const FRIC_CONST = 0.1; //global friction constant - should be a function of medium and hose material
 const VELOCITY_LIMIT = 1000; //ms^-1 //little hack to stop things getting too crazy
 const VELOCITY_THRESHOLD = 1e-8;  //how much precision for velocity?
 
 const SUB_STEPS = 10;
-const RECURSION_LIMIT = 3;
+const RECURSION_LIMIT = 0;
 
 const ELEMENT_LENGTH = 2; //metres
-const PIPE_ANGLE = -0*Math.PI; //radians
-const PIPE_DIAMETER = 0.038; //metres
-const RESTRICTION_DIAMETER = 0.038; //metres
+const PIPE_ANGLE = -0.5*Math.PI; //radians
+const PIPE_DIAMETER = 0.064; //metres
+const RESTRICTION_DIAMETER = 0.064; //metres
 let g_interfaces = [];
 let g_elements = [];
 
@@ -60,22 +60,22 @@ const water = new Fluid (PR_W, RHO_W, K_W, MU_W, ETA_W, 3e3);
 console.log(water.RHO_Critical);
 const air = new Fluid (PR_A, RHO_A, K_A, MU_A, ETA_A);
 
-let sink1 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, 10*water.PR, air);
+let sink1 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, water.PR, air);
 let pippy = new Pipe(PIPE_DIAMETER, 20*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
 pippy.fill(water);
-let testy = pippy.elements[2];
+let testy = pippy.elements[3];
 testy.diameter = RESTRICTION_DIAMETER;
-testy.fill(water, 1*water.PR);
+testy.fill(water, water.PR);
 console.log(testy);
 testy.update();
-pippy.elements[0].fill(air, air.PR);
+pippy.elements[0].fill(water, water.PR);
 pippy.elements[0].update();
 
 console.log(testy.pressure);
 console.log(pippy);
 
 
-let sink2 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1*water.PR, air);
+let sink2 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1.00*air.PR, air);
 
 sink1.pos_start.x -= sink1.directionCosine*sink1.elm_length;
 sink1.pos_start.z -= sink1.directionSine*sink1.elm_length;
@@ -97,8 +97,8 @@ let elm_container = document.getElementsByClassName('elm_container')[0];
 // TESTING ONLY
 let elm_divs = document.getElementsByClassName('elm');
 function elm_div_opac (elm, div) {
-  let op = Math.round(100*(elm.pressure - 5*PR_W)/(10*PR_W));
-  //op = 50;
+  let op = Math.round(100*(elm.pressure - 0.5*PR_W)/(1*PR_W));
+  op = 50;
   if(elm.fluid == water){
     div.style.backgroundColor = 'hsl( 280, 100%, ' + op + '%)';
   }

@@ -118,7 +118,11 @@ Interface.prototype.calculateMassFlows = function (time_step) {
           elm2.update();
         }
         this.depth --;
+      } else {
+        this.massFlow = this.massFlow/Math.pow(SUB_STEPS, RECURSION_LIMIT + 1);
+        this.velocity = this.velocity/Math.pow(SUB_STEPS, RECURSION_LIMIT + 1);
       }
+
 
     }
 
@@ -142,7 +146,7 @@ Interface.prototype.resolveMassFlows = function () {
   } else {
     //determine direciton of flow - if negative, it's towards elm1
     let elm_grow = elm1, elm_shrink = elm2;
-    if(this.massFlow < 0) {elm_grow = elm2; elm_shrink = elm1;}
+    if(this.velocity < 0) {elm_grow = elm2; elm_shrink = elm1;}
     let mass = Math.abs(this.massFlow);
     //work out volume displaced by elm_grow's fluid
     let vol_disp = mass/elm_grow.rho;
@@ -152,15 +156,13 @@ Interface.prototype.resolveMassFlows = function () {
     //don't do any of this under the following conditions
     //if flow is positive and elm2 is a sink and the sink is at its original dimensions...
     //if flow is negative and elm1 is a sink and the sink is at its original dimensions...
-    if(this.massFlow >= 0 && elm2.type == 'sink' && elm2.elm_length <= elm2.elm_length_0){
-      elm1.mass -= this.massFlow;
-    } else if(this.massFlow < 0 && elm1.type == 'sink' && elm1.elm_length <= elm1.elm_length_0){
-      elm2.mass += this.massFlow;
+    if(elm_shrink.type == 'sink' && elm_shrink.elm_length <= elm_shrink.elm_length_0){
+      elm_grow.mass -= mass;
     } else {
-
-
-      elm_grow.elm_length += length_disp;
+      length_disp = Math.min(length_disp, elm_shrink.elm_length);
+      elm_grow.elm_length + length_disp;
       elm_shrink.elm_length -= length_disp;
+
       if(elm_shrink.elm_length <= 0) {
         elm_shrink.elm_length = elm_shrink.elm_length_0;
         elm_grow.elm_length = elm_grow.elm_length_0;
@@ -173,9 +175,17 @@ Interface.prototype.resolveMassFlows = function () {
         elm_shrink.volume = elm_shrink.findVolume();
         elm_grow.volume = elm_grow.findVolume();
         elm_shrink.fill(elm_grow.fluid, elm_grow.pressure);
+        //take average of connected interface velocities?
+        //or simply apply elm_grow's velocities to elm_shrink's?
+        if(elm_shrink.interfaces[0] && elm_grow.interfaces[0]){
+          elm_shrink.interfaces[0].velocity = elm_grow.interfaces[0].velocity;
+        }
+        if(elm_shrink.interfaces[1] && elm_grow.interfaces[1]){
+          elm_shrink.interfaces[1].velocity = elm_grow.interfaces[1].velocity;
+        }
         elm_grow.fill(elm_grow.fluid, elm_grow.pressure);
       } else {
-      if(this.massFlow > 0) {
+      if(this.velocity > 0) {
         elm_grow.pos_end = elm_grow.findPosEnd();
         elm_grow.pos_middle = elm_grow.findPosMiddle();
         elm_shrink.pos_start = elm_grow.pos_end;
@@ -183,10 +193,10 @@ Interface.prototype.resolveMassFlows = function () {
         elm_shrink.volume = elm_shrink.findVolume();
         elm_grow.volume = elm_grow.findVolume();
       } else {
-        elm_shrink.pos_end = elm_shrink.findPosEnd();
-        elm_shrink.pos_middle = elm_shrink.findPosMiddle();
-        elm_grow.pos_start = elm_shrink.pos_end;
+        elm_grow.pos_start = elm_grow.findPosStart();
         elm_grow.pos_middle = elm_grow.findPosMiddle();
+        elm_shrink.end = elm_grow.pos_start;
+        elm_shrink.pos_middle = elm_shrink.findPosMiddle();
         elm_shrink.volume = elm_shrink.findVolume();
         elm_grow.volume = elm_grow.findVolume();
       }
