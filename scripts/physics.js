@@ -27,7 +27,7 @@ const MULTIPHASE_MIN_LENGTH = 0.1; //length at which an element's original lengt
 const ELEMENT_LENGTH = 2; //metres
 const PIPE_ANGLE = 0.12*Math.PI; //radians
 const PIPE_DIAMETER = 0.064; //metres
-const RESTRICTION_DIAMETER = 0.064; //metres
+const RESTRICTION_DIAMETER = 0.05; //metres
 let g_interfaces = [];
 let g_elements = [];
 
@@ -138,7 +138,7 @@ function visualise() {
     elm_div_opac(elm, elm_divs[i]);
     elm_divs[i].style.height = 100*elm.diameter/0.064 + '%';
     elm_divs[i].style.flexGrow = elm.elm_length;
-    //elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + Math.round(1000*vel*area*1000)/1000 +'L/s <br>' + elm.elm_length;
+    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + Math.round(1000*vel*area*1000)/1000 +'L/s <br>' + elm.elm_length;
   }
 
   requestAnimationFrame (visualise);
