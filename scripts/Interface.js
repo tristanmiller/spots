@@ -72,6 +72,8 @@ Interface.prototype.calculateMassFlows = function (time_step) {
   //determine forces
   let elm1 = this.elements[0];
   let elm2 = this.elements[1];
+
+
   if(elm1.area > 0 && elm2.area > 0) {
     let force = this.calculateForce(elm1, elm2);
     let mass = 0.5*(elm1.mass + elm2.mass);
@@ -144,87 +146,143 @@ Interface.prototype.resolveMassFlows = function () {
     elm1.mass -= this.massFlow;
     elm2.mass += this.massFlow;
   } else {
-    //determine direciton of flow - if negative, it's towards elm1
-    let elm_grow = elm1, elm_shrink = elm2;
-    if(this.velocity < 0) {elm_grow = elm2; elm_shrink = elm1;}
+    //NEED NEW STUFF TO HANDLE CREATION of SUB-ELEMENTS
+    //subdivision should only happen across a NORMAL interface (not a subInterface)
+    //identify the element to be subdivided.
+    let elm_subdiv = elm1;
+    let elm_pushy = elm2;
+    if (this.velocity < 0) {elm_subdiv = elm2; elm_pushy = elm1;}
+    elm_subdiv.subdivided = true;
+    //except of course if elm_subdiv is a Sink...
     let mass = Math.abs(this.massFlow);
-    //work out volume displaced by elm_grow's fluid
-    let vol_disp = mass/elm_grow.rho;
-    //work out length displaced
-    let length_disp = vol_disp/elm_shrink.area;
-    //change dimensions (elm_length, pos_start, pos_end, pos_mid, redo volumes etc) of both elements connected to interface
-    //if length_disp is longer than the neighbouring element
-      //return the next element to its original length
-      //fill this element with the correct fluid etc
-      //determine a new length_disp and apply to the following following element
-      //this could get way more complicated than intended...
-    //don't do any of this under the following conditions
-    //if flow is positive and elm2 is a sink and the sink is at its original dimensions...
-    //if flow is negative and elm1 is a sink and the sink is at its original dimensions...
-    if(elm_shrink.type == 'sink' && elm_shrink.elm_length <= elm_shrink.elm_length_0){
-      elm_grow.mass -= mass;
-    } else {
-      length_disp = Math.min(length_disp, elm_shrink.elm_length);
-      elm_grow.elm_length += length_disp;
-      elm_shrink.elm_length -= length_disp;
-      //round elm_lengths to avoid elements getting stuck with tiny, unaccelerateable masses
-      //could use a particular length as a threshold, e.g. 1mm, or make it relative to the element's original length?
-      if(elm_shrink.elm_length < MULTIPHASE_MIN_LENGTH) {
-        elm_shrink.elm_length = 0;
+    let vol_disp = mass/elm_pushy.rho;
+    let length_disp = vol_disp/elm_subdiv.area;
+
+    if(length_disp >= elm_subdiv.length - MULTIPHASE_MIN_LENGTH) {
+      //don't worry about subdividing, just fill elm_subdiv with the correct Fluid
+      //at the right pressure, setting interface velocities appropriately
+    } else if (length_disp >= MULTIPHASE_MIN_LENGTH) {
+      //elm_subdiv now gets its sub-elements activated
+      // need to detect what's on each side so we know what fluid to put where
+      //// can do this using the velocity or just the media in both elms
+
+      let idx = 1;
+
+      if(this.velocity < 0) {
+        let idx = 0;
       }
-      if(elm_shrink.elm_length <= 0) {
-        elm_shrink.elm_length = elm_shrink.elm_length_0;
-        elm_grow.elm_length = elm_grow.elm_length_0;
-        elm_shrink.pos_start = elm_shrink.pos_start_0;
-        elm_shrink.pos_end = elm_shrink.pos_end_0;
-        elm_shrink.pos_middle = elm_shrink.pos_middle_0;
-        elm_grow.pos_start = elm_grow.pos_start_0;
-        elm_grow.pos_end = elm_grow.pos_end_0;
-        elm_grow.pos_middle = elm_grow.pos_middle_0;
-        elm_shrink.volume = elm_shrink.findVolume();
-        elm_grow.volume = elm_grow.findVolume();
+      elm_subdiv.sub_elements[1 - idx] = new Element(elm_subdiv.diameter, elm_subdiv.elm_length, elm_subdiv.angle, elm_subdiv.pos_start);
+      elm_subdiv.sub_elements[idx] = new Element(elm_subdiv.diameter, elm_subdiv.elm_length, elm_subdiv.angle, elm_subdiv.pos_start);
 
-        //take average of connected interface velocities?
-        //or simply apply elm_grow's velocities to elm_shrink's?
-        //PROBLEM: this assumes that the elements are connected in the positive velocity direction - careful!!!
-        if (this.velocity > 0) {
-          if(elm_shrink.interfaces[1]) {
-            elm_shrink.interfaces[1].velocity = this.velocity;
-          }
-          if(elm_grow.interfaces.length > 1){
-            this.velocity = (elm_grow.interfaces[0].velocity + elm_grow.interfaces[1].velocity)/2;
-          } else { this.velocity = this.velocity/2;}
-        } else if (this.velocity < 0) {
-          if(elm_shrink.interfaces[0]) {
-            elm_shrink.interfaces[0].velocity = this.velocity;
-          }
-          if(elm_grow.interfaces.length > 1){
-            this.velocity = (elm_grow.interfaces[0].velocity + elm_grow.interfaces[1].velocity)/2;
-          } else {
-            this.velocity = this.velocity/2;
-          }
+      elm_subdiv.sub_elements[1 - idx].elm_length = length_disp;
+      elm_subdiv.sub_elements[idx].elm_length -= length_disp;
 
+      elm_subdiv.sub_elements[1-idx].fill(elm_pushy.fluid, elm_pushy.pressure);
+      elm_subdiv.sub_elements[idx].fill(elm_subdiv.fluid, elm_subdiv.pressure);
+
+      elm_subdiv.sub_elements[0].pos_end = elm_subdiv.sub_elements[0].findPosEnd();
+      elm_subdiv.sub_elements[0].pos_middle = elm_subdiv.sub_elements[0].findPosMiddle();
+      elm_subdiv.sub_elements[1].pos_start = elm_subdiv.sub_elements[0].pos_end;
+      elm_subdiv.sub_elements[1].pos_middle = elm_subdiv.sub_elements[1].findPosMiddle();
+
+      // connect the sub elements to each other
+      connectElements(elm_subdiv.sub_elements[0], elm_subdiv.sub_elements[1]);
+
+
+
+
+
+    } else {
+      //don't do anything this time? or should we just snap to the MULTIPHASE_MIN_LENGTH?
+    }
+
+
+
+    //MUCH OF THE FOLLOWING WILL ONLY APPLY TO SUB-ELEMENTS
+    if(1 == 2){
+    //determine direciton of flow - if negative, it's towards elm1
+
+      let elm_grow = elm1, elm_shrink = elm2;
+      if(this.velocity < 0) {elm_grow = elm2; elm_shrink = elm1;}
+      let mass = Math.abs(this.massFlow);
+      //work out volume displaced by elm_grow's fluid
+      let vol_disp = mass/elm_grow.rho;
+      //work out length displaced
+      let length_disp = vol_disp/elm_shrink.area;
+      //change dimensions (elm_length, pos_start, pos_end, pos_mid, redo volumes etc) of both elements connected to interface
+      //if length_disp is longer than the neighbouring element
+        //return the next element to its original length
+        //fill this element with the correct fluid etc
+        //determine a new length_disp and apply to the following following element
+        //this could get way more complicated than intended...
+      //don't do any of this under the following conditions
+      //if flow is positive and elm2 is a sink and the sink is at its original dimensions...
+      //if flow is negative and elm1 is a sink and the sink is at its original dimensions...
+      if(elm_shrink.type == 'sink' && elm_shrink.elm_length <= elm_shrink.elm_length_0){
+        elm_grow.mass -= mass;
+      } else {
+        length_disp = Math.min(length_disp, elm_shrink.elm_length);
+        elm_grow.elm_length += length_disp;
+        elm_shrink.elm_length -= length_disp;
+        //round elm_lengths to avoid elements getting stuck with tiny, unaccelerateable masses
+        //could use a particular length as a threshold, e.g. 1mm, or make it relative to the element's original length?
+        if(elm_shrink.elm_length < MULTIPHASE_MIN_LENGTH) {
+          elm_shrink.elm_length = 0;
         }
-
-
-        elm_shrink.fill(elm_grow.fluid, elm_grow.pressure);
-        elm_grow.fill(elm_grow.fluid, elm_grow.pressure);
-
-      } else if (elm_shrink.elm_length > 0) {
-        if(this.velocity > 0) {
-          elm_grow.pos_end = elm_grow.findPosEnd();
-          elm_grow.pos_middle = elm_grow.findPosMiddle();
-          elm_shrink.pos_start = elm_grow.pos_end;
-          elm_shrink.pos_middle = elm_shrink.findPosMiddle();
+        if(elm_shrink.elm_length <= 0) {
+          elm_shrink.elm_length = elm_shrink.elm_length_0;
+          elm_grow.elm_length = elm_grow.elm_length_0;
+          elm_shrink.pos_start = elm_shrink.pos_start_0;
+          elm_shrink.pos_end = elm_shrink.pos_end_0;
+          elm_shrink.pos_middle = elm_shrink.pos_middle_0;
+          elm_grow.pos_start = elm_grow.pos_start_0;
+          elm_grow.pos_end = elm_grow.pos_end_0;
+          elm_grow.pos_middle = elm_grow.pos_middle_0;
           elm_shrink.volume = elm_shrink.findVolume();
           elm_grow.volume = elm_grow.findVolume();
-        } else {
-          elm_grow.pos_start = elm_grow.findPosStart();
-          elm_grow.pos_middle = elm_grow.findPosMiddle();
-          elm_shrink.end = elm_grow.pos_start;
-          elm_shrink.pos_middle = elm_shrink.findPosMiddle();
-          elm_shrink.volume = elm_shrink.findVolume();
-          elm_grow.volume = elm_grow.findVolume();
+
+          //take average of connected interface velocities?
+          //or simply apply elm_grow's velocities to elm_shrink's?
+          //PROBLEM: this assumes that the elements are connected in the positive velocity direction - careful!!!
+          if (this.velocity > 0) {
+            if(elm_shrink.interfaces[1]) {
+              elm_shrink.interfaces[1].velocity = this.velocity;
+            }
+            if(elm_grow.interfaces.length > 1){
+              this.velocity = (elm_grow.interfaces[0].velocity + elm_grow.interfaces[1].velocity)/2;
+            } else { this.velocity = this.velocity/2;}
+          } else if (this.velocity < 0) {
+            if(elm_shrink.interfaces[0]) {
+              elm_shrink.interfaces[0].velocity = this.velocity;
+            }
+            if(elm_grow.interfaces.length > 1){
+              this.velocity = (elm_grow.interfaces[0].velocity + elm_grow.interfaces[1].velocity)/2;
+            } else {
+              this.velocity = this.velocity/2;
+            }
+
+          }
+
+
+          elm_shrink.fill(elm_grow.fluid, elm_grow.pressure);
+          elm_grow.fill(elm_grow.fluid, elm_grow.pressure);
+
+        } else if (elm_shrink.elm_length > 0) {
+          if(this.velocity > 0) {
+            elm_grow.pos_end = elm_grow.findPosEnd();
+            elm_grow.pos_middle = elm_grow.findPosMiddle();
+            elm_shrink.pos_start = elm_grow.pos_end;
+            elm_shrink.pos_middle = elm_shrink.findPosMiddle();
+            elm_shrink.volume = elm_shrink.findVolume();
+            elm_grow.volume = elm_grow.findVolume();
+          } else {
+            elm_grow.pos_start = elm_grow.findPosStart();
+            elm_grow.pos_middle = elm_grow.findPosMiddle();
+            elm_shrink.end = elm_grow.pos_start;
+            elm_shrink.pos_middle = elm_shrink.findPosMiddle();
+            elm_shrink.volume = elm_shrink.findVolume();
+            elm_grow.volume = elm_grow.findVolume();
+          }
         }
       }
     }

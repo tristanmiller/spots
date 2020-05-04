@@ -16,6 +16,8 @@ function Element(diameter, length, angle, pos_start){
   this.pos_0 = this.pos;
   this.type =  'simple';
   this.interfaces = [];
+  this.subdivided = false;
+  this.sub_elements = [];
   this.flows = [];
   g_elements.push(this);
 }

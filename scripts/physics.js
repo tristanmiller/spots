@@ -22,7 +22,7 @@ const VELOCITY_THRESHOLD = 1e-8;  //how much precision for velocity?
 
 const SUB_STEPS = 10;
 const RECURSION_LIMIT = 0;
-const MULTIPHASE_MIN_LENGTH = 0.1; //length at which an element's original length is reinstated
+const MULTIPHASE_MIN_LENGTH = 0.1; //snapping length for sub-elements
 
 const ELEMENT_LENGTH = 2; //metres
 const PIPE_ANGLE = 0.12*Math.PI; //radians
@@ -30,6 +30,9 @@ const PIPE_DIAMETER = 0.064; //metres
 const RESTRICTION_DIAMETER = 0.05; //metres
 let g_interfaces = [];
 let g_elements = [];
+
+let g_subElements = [];
+let g_subInterfaces = [];
 
 function connectElements (elm1, elm2) {
   //what about the end positions of the elements?
