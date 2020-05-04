@@ -7,7 +7,10 @@ function Interface (elements) {
   this.velocity = 0;
   this.massFlow = 0;
   this.depth = 0;
+  this.history = [];
+  this.sub = false;
   g_interfaces.push(this);
+  console.log(g_interfaces.length);
 }
 
 Interface.prototype.calculatePressureForce = function (elm1, elm2) {
@@ -139,6 +142,7 @@ Interface.prototype.calculateMassFlows = function (time_step) {
 };
 
 Interface.prototype.resolveMassFlows = function () {
+  let mass = Math.abs(this.massFlow);
   let elm1 = this.elements[0];
   let elm2 = this.elements[1];
   // this step needs to change to incorporate the inter-fluid boundary
@@ -146,60 +150,9 @@ Interface.prototype.resolveMassFlows = function () {
     elm1.mass -= this.massFlow;
     elm2.mass += this.massFlow;
   } else {
-    //NEED NEW STUFF TO HANDLE CREATION of SUB-ELEMENTS
-    //subdivision should only happen across a NORMAL interface (not a subInterface)
-    //identify the element to be subdivided.
-    let elm_subdiv = elm1;
-    let elm_pushy = elm2;
-    if (this.velocity < 0) {elm_subdiv = elm2; elm_pushy = elm1;}
-    elm_subdiv.subdivided = true;
-    //except of course if elm_subdiv is a Sink...
-    let mass = Math.abs(this.massFlow);
-    let vol_disp = mass/elm_pushy.rho;
-    let length_disp = vol_disp/elm_subdiv.area;
-
-    if(length_disp >= elm_subdiv.length - MULTIPHASE_MIN_LENGTH) {
-      //don't worry about subdividing, just fill elm_subdiv with the correct Fluid
-      //at the right pressure, setting interface velocities appropriately
-    } else if (length_disp >= MULTIPHASE_MIN_LENGTH) {
-      //elm_subdiv now gets its sub-elements activated
-      // need to detect what's on each side so we know what fluid to put where
-      //// can do this using the velocity or just the media in both elms
-
-      let idx = 1;
-
-      if(this.velocity < 0) {
-        let idx = 0;
-      }
-      elm_subdiv.sub_elements[1 - idx] = new Element(elm_subdiv.diameter, elm_subdiv.elm_length, elm_subdiv.angle, elm_subdiv.pos_start);
-      elm_subdiv.sub_elements[idx] = new Element(elm_subdiv.diameter, elm_subdiv.elm_length, elm_subdiv.angle, elm_subdiv.pos_start);
-
-      elm_subdiv.sub_elements[1 - idx].elm_length = length_disp;
-      elm_subdiv.sub_elements[idx].elm_length -= length_disp;
-
-      elm_subdiv.sub_elements[1-idx].fill(elm_pushy.fluid, elm_pushy.pressure);
-      elm_subdiv.sub_elements[idx].fill(elm_subdiv.fluid, elm_subdiv.pressure);
-
-      elm_subdiv.sub_elements[0].pos_end = elm_subdiv.sub_elements[0].findPosEnd();
-      elm_subdiv.sub_elements[0].pos_middle = elm_subdiv.sub_elements[0].findPosMiddle();
-      elm_subdiv.sub_elements[1].pos_start = elm_subdiv.sub_elements[0].pos_end;
-      elm_subdiv.sub_elements[1].pos_middle = elm_subdiv.sub_elements[1].findPosMiddle();
-
-      // connect the sub elements to each other
-      connectElements(elm_subdiv.sub_elements[0], elm_subdiv.sub_elements[1]);
-
-
-
-
-
-    } else {
-      //don't do anything this time? or should we just snap to the MULTIPHASE_MIN_LENGTH?
-    }
-
-
-
-    //MUCH OF THE FOLLOWING WILL ONLY APPLY TO SUB-ELEMENTS
-    if(1 == 2){
+    if(!this.sub) {
+      this.subdivide(elm1, elm2);
+    } else if(this.sub){
     //determine direciton of flow - if negative, it's towards elm1
 
       let elm_grow = elm1, elm_shrink = elm2;
@@ -286,5 +239,58 @@ Interface.prototype.resolveMassFlows = function () {
         }
       }
     }
+  }
+}
+
+Interface.prototype.subdivide = function (elm1, elm2) {
+  let mass = Math.abs(this.massFlow);
+  let elm_subdiv = elm1;
+  let elm_pushy = elm2;
+  if (this.velocity < 0) {elm_subdiv = elm2; elm_pushy = elm1;}
+  if(elm_subdiv.type != 'sink' && !elm_subdiv.subdivided){
+    elm_subdiv.subdivided = true;
+    //except of course if elm_subdiv is a Sink...
+
+    let vol_disp = mass/elm_pushy.rho;
+    let length_disp = vol_disp/elm_subdiv.area;
+
+    if(length_disp >= elm_subdiv.length - MULTIPHASE_MIN_LENGTH) {
+      //don't worry about subdividing, just fill elm_subdiv with the correct Fluid
+      elm_subdiv.fill(elm_pushy.fluid, elm_pushy.pressure);
+      //at the right pressure, setting interface velocities appropriately
+    } else {
+      length_disp = Math.max(length_disp, MULTIPHASE_MIN_LENGTH);
+
+      //create ONE new element
+      let subElement = new Element(elm_subdiv.diameter, length_disp, elm_subdiv.angle, elm_subdiv.pos_start);
+      //look at the existing elm's start pos, end pos
+      elm_subdiv.elm_length -= length_disp;
+      if(elm_subdiv.pos_start == elm_pushy.pos_end) {
+        elm_subdiv.pos_start = subElement.pos_end;
+        elm_subdiv.pos_middle = elm_subdiv.findPosMiddle();
+      }
+      else if (elm_subdiv.pos_end == elm_pushy.pos_start) {
+        subElement.pos_end = elm_subdiv.pos_end;
+        subElement.pos_start = subElement.findPosStart();
+        subElement.pos_middle = subElement.findPosMiddle();
+        elm_subdiv.pos_end = subElement.pos_start;
+      }
+      subElement.createDiv();
+      elm_subdiv.volume = elm_subdiv.findVolume();
+
+      elm_subdiv.fill(elm_subdiv.fluid, elm_subdiv.pressure);
+      subElement.fill(elm_pushy.fluid, elm_pushy.pressure);
+
+      //store current connectivity in 'history'
+      this.history.push(this.elements);
+
+      //rewire the current interface to the brand new element.
+      this.elements = [elm_pushy, subElement];
+      // connect the sub elements to each other
+      let subInterface = new Interface([elm_subdiv, subElement]);
+      subInterface.sub = true;
+    }
+  } else if (elm_subdiv.type == 'sink') {
+    elm_pushy.mass -= mass;
   }
 }

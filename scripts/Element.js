@@ -136,3 +136,19 @@ Element.prototype.checkMassFlows = function () {
       return true;
     } else {return false;}
 }
+
+Element.prototype.updateDiv = function () {
+  this.elm_div.style.top = 20*this.pos_start.z + 'px';
+  this.elm_div.style.left = 20*this.pos_start.x + 'px';
+  this.elm_div.style.width = 20*this.elm_length + 'px';
+  this.elm_div.style.transform = 'rotateZ(' + this.angle*180/Math.PI + 'deg)';
+}
+
+Element.prototype.createDiv = function () {
+  let elm_container = document.getElementsByClassName('elm_container')[0];
+  this.elm_div = document.createElement('div');
+  this.elm_div.className = 'elm';
+  this.updateDiv();
+  if(this.type == 'sink') {this.elm_div.classList.add('sink');}
+  elm_container.appendChild(this.elm_div);
+}

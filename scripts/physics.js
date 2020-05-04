@@ -27,7 +27,7 @@ const MULTIPHASE_MIN_LENGTH = 0.1; //snapping length for sub-elements
 const ELEMENT_LENGTH = 2; //metres
 const PIPE_ANGLE = 0.12*Math.PI; //radians
 const PIPE_DIAMETER = 0.064; //metres
-const RESTRICTION_DIAMETER = 0.05; //metres
+const RESTRICTION_DIAMETER = 0.064; //metres
 let g_interfaces = [];
 let g_elements = [];
 
@@ -64,7 +64,7 @@ const water = new Fluid (PR_W, RHO_W, K_W, MU_W, ETA_W, 3e3);
 const air = new Fluid (PR_A, RHO_A, K_A, MU_A, ETA_A);
 
 let sink1 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, 1.4*water.PR, water);
-let pippy = new Pipe(PIPE_DIAMETER, 20*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
+let pippy = new Pipe(PIPE_DIAMETER, 5*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
 pippy.fill(air);
 let testy = pippy.elements[3];
 testy.diameter = RESTRICTION_DIAMETER;
@@ -90,11 +90,7 @@ connectElements(sink1, pippy.startElement);
 connectElements(pippy.endElement, sink2);
 
 for (let i = 0, l = g_elements.length; i < l; i++) {
-let elm_container = document.getElementsByClassName('elm_container')[0];
-  let elm_div = document.createElement('div');
-  elm_div.className = 'elm';
-  if(g_elements[i].type == 'sink') {elm_div.classList.add('sink');}
-  elm_container.appendChild(elm_div);
+g_elements[i].createDiv();
 }
 
 // TESTING ONLY
@@ -129,25 +125,34 @@ function visualise() {
   }
 
   for (let i = 0, l = g_elements.length; i < l; i++) {
+
     let elm = g_elements[i];
+    elm.updateDiv();
+    let elm_div = elm.elm_div;
     let vel = 0;
 
     //this is to facilitate flow and speed reporting - still not quite right
     //should average the velocities across an element instead of reporting vel at one end...
-    if(g_interfaces[i]) {
-      vel = g_interfaces[i].velocity;
-      area = g_interfaces[i].area;
+    if(elm.interfaces[1]) {
+
+      vel = elm.interfaces[1].velocity;
+      area = elm.interfaces[1].area;
+    } else {
+      vel = 0;
+      area = 0;
     }
-    elm_div_opac(elm, elm_divs[i]);
-    elm_divs[i].style.height = 100*elm.diameter/0.064 + '%';
-    elm_divs[i].style.flexGrow = elm.elm_length;
-    elm_divs[i].innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + Math.round(1000*vel*area*1000)/1000 +'L/s <br>' + elm.elm_length;
+
+
+    elm_div_opac(elm, elm_div);
+    elm_div.style.height = 100*elm.diameter/0.064 + '%';
+    // elm_divs.style.flexGrow = elm.elm_length;
+    elm_div.innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + Math.round(1000*vel*area*1000)/1000 +'L/s <br>' + elm.elm_length;
   }
 
-  requestAnimationFrame (visualise);
+  // requestAnimationFrame (visualise);
 }
 
 let viewport = document.getElementsByClassName('viewport')[0];
 viewport.addEventListener('click', visualise);
 
-visualise();
+// visualise();
