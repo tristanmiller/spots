@@ -17,6 +17,8 @@ function Element(diameter, length, angle, pos_start){
   this.type =  'simple';
   this.interfaces = [];
   this.subdivided = false;
+  this.fresh = false;
+  this.parentElement = '';
   this.sub_elements = [];
   this.flows = [];
   g_elements.push(this);
@@ -86,6 +88,7 @@ Element.prototype.update = function () {
   this.findDensity();
   this.newPressureFromDensity(this.fluid.PR, this.fluid.RHO, this.fluid.K);
   this.flows = [];
+  this.fresh = false;
 }
 
 Element.prototype.fill = function (fluid, pressure) {
@@ -138,9 +141,9 @@ Element.prototype.checkMassFlows = function () {
 }
 
 Element.prototype.updateDiv = function () {
-  this.elm_div.style.top = 20*this.pos_start.z + 'px';
-  this.elm_div.style.left = 20*this.pos_start.x + 'px';
-  this.elm_div.style.width = 20*this.elm_length + 'px';
+  this.elm_div.style.top = 50*this.pos_start.z + 'px';
+  this.elm_div.style.left = 50*this.pos_start.x + 'px';
+  this.elm_div.style.width = 50*this.elm_length + 'px';
   this.elm_div.style.transform = 'rotateZ(' + this.angle*180/Math.PI + 'deg)';
 }
 

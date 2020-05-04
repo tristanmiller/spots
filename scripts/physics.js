@@ -13,7 +13,7 @@ const MU_A = 1.48e-5; //m^2/s
 const ETA_A = 1.81e-5; //Pa.s
 
 const TIME_STEP = 0.0001; // seconds
-const INTERVALS = Math.round(1/TIME_STEP);
+const INTERVALS = 1000;//Math.round(1/TIME_STEP);
 
 const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 1; //global friction constant - should be a function of medium and hose material
@@ -22,17 +22,15 @@ const VELOCITY_THRESHOLD = 1e-8;  //how much precision for velocity?
 
 const SUB_STEPS = 10;
 const RECURSION_LIMIT = 0;
-const MULTIPHASE_MIN_LENGTH = 0.1; //snapping length for sub-elements
+const MULTIPHASE_MIN_LENGTH = 0.15; //snapping length for sub-elements
 
 const ELEMENT_LENGTH = 2; //metres
-const PIPE_ANGLE = 0.12*Math.PI; //radians
+const PIPE_ANGLE = 0*Math.PI; //radians
 const PIPE_DIAMETER = 0.064; //metres
 const RESTRICTION_DIAMETER = 0.064; //metres
+
 let g_interfaces = [];
 let g_elements = [];
-
-let g_subElements = [];
-let g_subInterfaces = [];
 
 function connectElements (elm1, elm2) {
   //what about the end positions of the elements?
@@ -63,12 +61,12 @@ function Fluid (pressure_ref, rho_ref, K, mu, eta, pressure_cav) {
 const water = new Fluid (PR_W, RHO_W, K_W, MU_W, ETA_W, 3e3);
 const air = new Fluid (PR_A, RHO_A, K_A, MU_A, ETA_A);
 
-let sink1 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, 1.4*water.PR, water);
+let sink1 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, 1.4*air.PR, air);
 let pippy = new Pipe(PIPE_DIAMETER, 5*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
-pippy.fill(air);
-let testy = pippy.elements[3];
+pippy.fill(water);
+let testy = pippy.elements[1];
 testy.diameter = RESTRICTION_DIAMETER;
-testy.fill(air, water.PR);
+testy.fill(water, water.PR);
 console.log(testy);
 testy.update();
 pippy.elements[0].fill(water, water.PR);
