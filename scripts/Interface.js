@@ -194,6 +194,45 @@ Interface.prototype.resolveMassFlows = function () {
 }
 
 Interface.prototype.move = function () {
+  let elm1 = this.elements[0];
+  let elm2 = this.elements[1];
+
+  let elm_grow = elm1;
+  let elm_shrink = elm2;
+  let adjust = this.ends[1];
+  if (this.massFlow < 0) { elm_grow = elm2; elm_shrink = elm1; this.ends[0];}
+
+  let mass = Math.abs(this.massFlow);
+  let rho = Math.max(elm_push.rho, elm_split.rho);
+  let vol_disp = mass/rho;
+  let length_disp = vol_disp/elm_split.elm_length;
+
+  // length_disp is distance the interface will be moved
+  // constrain this to the length of the elm_shrink
+
+  length_disp = Math.min(length_disp, elm_shrink.elm_length);
+
+  elm_grow.elm_length += length_disp;
+  elm_shrink.elm_length -= length_disp;
+
+  elm_grow.volume = elm_grow.findVolume();
+  elm_shrink.volume = elm_shrink.findVolume();
+
+  if(adjust == 'start') {
+    //increase elm_grow's length, find new pos_end
+    elm_grow.pos_end = elm_grow.findPosEnd();
+    elm_grow.pos_middle = elm_grow.findPosMiddle();
+    //decrease elm_shrink's length, set elm_shrink's pos_start to elm_grow's pos_end
+    elm_shrink.pos_start = elm_grow.pos_end;
+    elm_shrink.pos_middle = elm_shrink.findPosMiddle();
+  } else if (adjust == 'end') {
+    //decrease elm_shrink's length, find new pos_end
+    elm_shrink.pos_end = elm_shrink.findPosEnd();
+    elm_shrink.pos_middle = elm_shrink.findPosMiddle();
+    //increase elm_shrink's length, set elm_grow's pos_start to elm_shrink's pos_end
+    elm_grow.pos_start = elm_shrink.pos_end;
+    elm_grow.pos_middle = elm_grow.findPosMiddle();
+  }
 
 }
 
