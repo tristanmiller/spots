@@ -212,8 +212,15 @@ Interface.prototype.move = function () {
 
   length_disp = Math.min(length_disp, elm_shrink.elm_length);
 
-  elm_grow.elm_length += length_disp;
-  elm_shrink.elm_length -= length_disp;
+  if (elm_shrink.elm_length - length_disp < MULTIPHASE_MIN_LENGTH) {
+    length_disp = elm_shrink.elm_length;
+    elm_shrink.elm_length = 0;
+    elm_grow.elm_length += length_disp;
+  } else {
+      elm_grow.elm_length += length_disp;
+      elm_shrink.elm_length -= length_disp;
+  }
+
 
   elm_grow.volume = elm_grow.findVolume();
   elm_grow.findMass();
@@ -228,8 +235,28 @@ Interface.prototype.move = function () {
   } else {
 
     //do the thing that removes the shrinky element
-    //work out which one is the splinter element somehow?
-    //or just find the relevant interfaces and stitch them into the victorious element
+    //find the relevant interfaces and stitch them into the victorious element
+    //it's also worth knowing if the interface in question is a subInterface, too.
+    let shrink_interfaces = elm_shrink.interfaces;
+    for (let i = 0, l = shrink_interfaces.length; i < l; i++) {
+      //ignore if we end up talking about this element,
+      //otherwise, get the elements that that interface is connected to and connect this interface to the relevant one
+      //also, copy the 'sub' status from that interface
+      let iface = shrink_interfaces[i];
+      if(iface != this) {
+        this.sub = iface.sub;
+        //cycle through the elements of iface
+        for (let j = 0, n = iface.elements.length; j < n; j++) {
+          let elm = iface.elements[i];
+          if (elm != elm_shrink) {
+            this.elements = [elm_grow, elm];
+            this.determineEnds();
+            break;
+          }
+        }
+
+      }
+    }
     //disable the 'dead' element and disable the 'subInterface'
   }
 
