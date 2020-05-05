@@ -12,6 +12,7 @@ function Interface (elements, sub) {
   this.sub = sub;
   this.fresh = false;
   this.active = true;
+  this.determineEnds();
   if(sub) {
     //TODO: replace this with 'reallocation'
     g_subInterfaces.push(this);
@@ -182,6 +183,7 @@ Interface.prototype.resolveMassFlows = function () {
     if (this.sub) {
       //do subinterface thing (in this case, shift position of fluid boundary)
       //collapse elements as necessary, deactivate and restore interfaces
+      this.move();
     } else {
       //mark for subdivision (place on subdiv list) to be handled at end of cycle
       this.subdivide();
@@ -190,6 +192,11 @@ Interface.prototype.resolveMassFlows = function () {
     }
   }
 }
+
+Interface.prototype.move = function () {
+
+}
+
 
 Interface.prototype.subdivide = function () {
   let elm1 = this.elements[0];
@@ -214,24 +221,36 @@ Interface.prototype.subdivide = function () {
     // OR always just project into elm_split the MULTIPHASE_MIN_LENGTH?
     elm_split.elm_length -= length_disp;
     elm_split.volume = elm_split.findVolume();
-    let subElement;
+    let subElement = new Element(elm_split.diameter, length_disp, elm_split.angle, elm_split.pos_start);
+
     if (adjust == 'start') {
       // create new (sub)element at elm_split's pos_start
-      subElement = new Element(elm_split.diameter, length_disp, elm_split.angle, elm_split.pos_start);
       // adjust elm_split's pos_start to subElement's pos_end
       elm_split.pos_start = subElement.pos_end;
+      elm_split.pos_middle =  elm_split.findPosMiddle();
 
     } else if (adjust == 'end') {
+      console.log('end');
       // calculate new end position for elm_split
-      elm_split.posEnd = elm_split.findPosEnd();
+      elm_split.pos_end = elm_split.findPosEnd();
+      elm_split.pos_middle = elm_split.findPosMiddle();
       // create new sub(element) at elm_split's end position
-      subElement = new Element(elm_split.diameter, length_disp, elm_split.angle, elm_split.pos_end);
+      subElement.pos_start = elm_split.pos_end;
+      subElement.pos_end = subElement.findPosEnd();
+      subElement.pos_middle = subElement.findPosMiddle();
     }
-
+    subElement.createDiv();
     // fill subElement with the elm_push's fluid
-
+    subElement.fill(elm_push.fluid, elm_push.pressure);
+    elm_split.fill(elm_split.fluid, elm_split.pressure);
     // create a subInterface between subElement and elm_split
+    connectElements(elm_push, subElement);
+    connectElements(subElement, elm_split, true);
     //store original 'elements' list in history of THIS interface
+    this.history.push(this.elements);
     // rewire THIS interface to work between elm_push and subElement
+    this.elements = [elm_push, subElement];
+    this.determineEnds();
+
   }
 }
