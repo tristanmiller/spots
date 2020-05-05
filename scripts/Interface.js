@@ -29,10 +29,10 @@ Interface.prototype.determineEnds = function () {
   let backwardDistance = calculateDistance(elm2.pos_end, elm1.pos_start); //the Pythagorean distance between elm2's end, and elm1's start
 
   if (forwardDistance > backwardDistance) {//then elm2's end is connected to elm1's start
-    this.ends = [elm1.pos_start, elm2.pos_end];
+    this.ends = ['start', 'end'];
   } else {
     // take elm1's end to be connected to elm2's start
-    this.ends = [elm1.pos_end, elm2.pos_start];
+    this.ends = ['end', 'start'];
 
   }
 
@@ -184,6 +184,7 @@ Interface.prototype.resolveMassFlows = function () {
       //collapse elements as necessary, deactivate and restore interfaces
     } else {
       //mark for subdivision (place on subdiv list) to be handled at end of cycle
+      this.subdivide();
       //create subelement and sub interface
       //rejig interfaces and element boundaries to suit.
     }
@@ -199,13 +200,38 @@ Interface.prototype.subdivide = function () {
   //so we know which one to subdivide
   let elm_push = elm1;
   let elm_split = elm2;
-  if (this.massFlow < 0) { elm_push = elm2; elm_split = elm1;}
+  let adjust = this.ends[1];
 
-  let mass = Math.abs(this.massFlow);
-  //just don't know which end of the subdivided element to move
-  //how to figure this out?
-  //determine an approximate 'location' for the interface: compare start&end position pairs for the two elements
-  
-  //assign this interfaces's velocity to the sub-interface
+  if (this.massFlow < 0) { elm_push = elm2; elm_split = elm1; adjust = this.ends[0]; }
+  if(elm_split.type != 'sink') {
+    let mass = Math.abs(this.massFlow);
+    let rho = Math.max(elm_push.rho, elm_split.rho);
+    let vol_disp = mass/rho;
+    let length_disp = vol_disp/elm_split.elm_length;
 
+    //length_disp is the length of the new element that will be created
+    length_disp = Math.max(length_disp, MULTIPHASE_MIN_LENGTH);
+    // OR always just project into elm_split the MULTIPHASE_MIN_LENGTH?
+    elm_split.elm_length -= length_disp;
+    elm_split.volume = elm_split.findVolume();
+    let subElement;
+    if (adjust == 'start') {
+      // create new (sub)element at elm_split's pos_start
+      subElement = new Element(elm_split.diameter, length_disp, elm_split.angle, elm_split.pos_start);
+      // adjust elm_split's pos_start to subElement's pos_end
+      elm_split.pos_start = subElement.pos_end;
+
+    } else if (adjust == 'end') {
+      // calculate new end position for elm_split
+      elm_split.posEnd = elm_split.findPosEnd();
+      // create new sub(element) at elm_split's end position
+      subElement = new Element(elm_split.diameter, length_disp, elm_split.angle, elm_split.pos_end);
+    }
+
+    // fill subElement with the elm_push's fluid
+
+    // create a subInterface between subElement and elm_split
+    //store original 'elements' list in history of THIS interface
+    // rewire THIS interface to work between elm_push and subElement
+  }
 }
