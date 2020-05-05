@@ -32,9 +32,14 @@ const RESTRICTION_DIAMETER = 0.064; //metres
 let g_interfaces = [];
 let g_elements = [];
 
-function connectElements (elm1, elm2) {
+function calculateDistance(pos1, pos2) {
+  return Math.pow(pos1.x - pos2.x, 2) + Math.pow(pos1.z - pos2.z, 2);
+  // expand to 3d when necessary!
+}
+
+function connectElements (elm1, elm2, sub) {
   //what about the end positions of the elements?
-  let iface = new Interface([elm1, elm2]);
+  let iface = new Interface([elm1, elm2], sub);
 }
 
 function frictionFactor (diameter, velocity) {
