@@ -203,9 +203,9 @@ Interface.prototype.move = function () {
   if (this.massFlow < 0) { elm_grow = elm2; elm_shrink = elm1; this.ends[0];}
 
   let mass = Math.abs(this.massFlow);
-  let rho = Math.max(elm_push.rho, elm_split.rho);
-  let vol_disp = mass/rho;
-  let length_disp = vol_disp/elm_split.elm_length;
+  let rho = Math.max(elm_grow.rho, elm_shrink.rho);
+  let vol_disp = mass/elm_grow.rho;
+  let length_disp = vol_disp/elm_shrink.elm_length;
 
   // length_disp is distance the interface will be moved
   // constrain this to the length of the elm_shrink
@@ -216,7 +216,24 @@ Interface.prototype.move = function () {
   elm_shrink.elm_length -= length_disp;
 
   elm_grow.volume = elm_grow.findVolume();
-  elm_shrink.volume = elm_shrink.findVolume();
+  elm_grow.findMass();
+  elm_grow.findDensity();
+  elm_grow.newPressureFromDensity(elm_grow.fluid.PR, elm_grow.fluid.RHO, elm_grow.fluid.K);
+
+  if(elm_shrink.elm_length > MULTIPHASE_MIN_LENGTH) {
+    elm_shrink.volume = elm_shrink.findVolume();
+    elm_shrink.findMass();
+    elm_shrink.findDensity();
+    elm_shrink.newPressureFromDensity(elm_shrink.fluid.PR, elm_shrink.fluid.RHO, elm_shrink.fluid.K);
+  } else {
+
+    //do the thing that removes the shrinky element
+    //work out which one is the splinter element somehow?
+    //or just find the relevant interfaces and stitch them into the victorious element
+    //disable the 'dead' element and disable the 'subInterface'
+  }
+
+
 
   if(adjust == 'start') {
     //increase elm_grow's length, find new pos_end
@@ -233,6 +250,7 @@ Interface.prototype.move = function () {
     elm_grow.pos_start = elm_shrink.pos_end;
     elm_grow.pos_middle = elm_grow.findPosMiddle();
   }
+
 
 }
 

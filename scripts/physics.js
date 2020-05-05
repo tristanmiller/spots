@@ -13,7 +13,7 @@ const MU_A = 1.48e-5; //m^2/s
 const ETA_A = 1.81e-5; //Pa.s
 
 const TIME_STEP = 0.0001; // seconds
-const INTERVALS = 1;//Math.round(1/TIME_STEP);
+const INTERVALS = Math.round(1/TIME_STEP);
 
 const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 1; //global friction constant - should be a function of medium and hose material
@@ -82,7 +82,7 @@ console.log(testy.pressure);
 console.log(pippy);
 
 
-let sink2 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1.00*air.PR, water);
+let sink2 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1.0*air.PR, water);
 
 sink1.pos_start.x -= sink1.directionCosine*sink1.elm_length;
 sink1.pos_start.z -= sink1.directionSine*sink1.elm_length;
@@ -118,6 +118,12 @@ console.log(g_interfaces);
 
 function visualise() {
   for (let p = 0, l = INTERVALS; p < l; p++){
+    for (let i = 0, l = g_subInterfaces.length; i < l; i++) {
+      g_subInterfaces[i].calculateMassFlows();
+      g_subInterfaces[i].resolveMassFlows();
+    }
+
+
     for (let i = 0, l = g_interfaces.length; i < l; i++) {
       g_interfaces[i].calculateMassFlows();
       g_interfaces[i].resolveMassFlows();
@@ -153,7 +159,7 @@ function visualise() {
     elm_div.innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + Math.round(1000*vel*area*1000)/1000 +'L/s <br>' + elm.elm_length;
   }
 
-  // requestAnimationFrame (visualise);
+  requestAnimationFrame (visualise);
 }
 
 let viewport = document.getElementsByClassName('viewport')[0];
