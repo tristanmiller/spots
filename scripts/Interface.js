@@ -1,4 +1,4 @@
-function Interface (elements, sub) {
+function Interface (elements, sub, vel) {
   this.elements = elements;
   this.elements_0 = elements;
   for (let i = 0, l = this.elements.length; i < l; i++) {
@@ -6,6 +6,7 @@ function Interface (elements, sub) {
   }
   this.ends = [];
   this.velocity = 0;
+  if(vel) {this.velocity = vel;}
   this.massFlow = 0;
   this.depth = 0;
   this.history = [];
@@ -239,17 +240,12 @@ Interface.prototype.move = function () {
   if (elm_shrink.elm_length - length_disp < MULTIPHASE_MIN_LENGTH) {
     length_disp = elm_shrink.elm_length;
     elm_shrink.elm_length = 0;
-    elm_grow.elm_length += length_disp;
+    elm_grow.elm_length = elm_shrink.elm_length_0;
   } else {
       elm_grow.elm_length += length_disp;
       elm_shrink.elm_length -= length_disp;
   }
 
-
-  elm_grow.volume = elm_grow.findVolume();
-  elm_grow.findMass();
-  elm_grow.findDensity();
-  elm_grow.newPressureFromDensity(elm_grow.fluid.PR, elm_grow.fluid.RHO, elm_grow.fluid.K);
 
   if(elm_shrink.elm_length > MULTIPHASE_MIN_LENGTH) {
     elm_shrink.volume = elm_shrink.findVolume();
@@ -261,36 +257,40 @@ Interface.prototype.move = function () {
     //do the thing that removes the shrinky element
     //find the relevant interfaces and stitch them into the victorious element
 
-    //it's also worth knowing if the interface in question is a subInterface, too.
-    //TODO: see how new 'disconnect' method can be useful here.
-    // ie disconnect this interface.
-    // disconnect this other interface
-    // connect elm_grow to the other elm
-    // transfer 'sub' status to the new interface.
 
+    // get the interface on elm_shrink that isn't THIS interface
+    // get the element on intA that isn't elm_shrink
     let shrink_interfaces = elm_shrink.interfaces;
+    let intA = shrink_interfaces[0];
+
     for (let i = 0, l = shrink_interfaces.length; i < l; i++) {
-      //ignore if we end up talking about this element,
-      //otherwise, get the elements that that interface is connected to and connect this interface to the relevant one
-      //also, copy the 'sub' status from that interface
       let iface = shrink_interfaces[i];
-      if(iface != this) {
-        console.log(iface);
-        this.sub = iface.sub;
-        iface.active = false;
-        //cycle through the elements of iface
-        for (let j = 0, n = iface.elements.length; j < n; j++) {
-          let elm = iface.elements[i];
-          if (elm != elm_shrink) {
-            this.elements = [elm_grow, elm];
-            this.determineEnds();
-            break;
-          }
-        }
+      if (iface != this) {
+        intA = iface;
+        break;
       }
     }
-    //disable the 'dead' element and disable the 'subInterface'
+
+    let elm = intA.elements[0];
+
+    for (let i = 0, l = intA.elements.length; i < l; i++) {
+      if(intA.elements[i] != elm_shrink) {
+          elm = intA.elements[i];
+          break;
+      }
+    }
+
+    //disconnect both interfaces around elm_shrink
+    //disable elm_shrink
+    intA.disconnect();
+    this.disconnect();
     elm_shrink.active = false;
+
+    let avgVel = 0.5*(intA.velocity + this.velocity);
+    //connect elm_grow with elm (creating a new Interface)
+    //confer intA's 'sub' status to this new interface, and give it the avg vel of the two it replaces.
+    connectElements(elm_grow, elm, intA.sub, avgVel);
+
   }
 
 
@@ -334,7 +334,7 @@ Interface.prototype.subdivide = function () {
     let length_disp = vol_disp/elm_split.elm_length;
 
     //length_disp is the length of the new element that will be created
-    length_disp = Math.max(length_disp, MULTIPHASE_MIN_LENGTH);
+    length_disp = MULTIPHASE_MIN_LENGTH;
     // OR always just project into elm_split the MULTIPHASE_MIN_LENGTH?
     elm_split.elm_length -= length_disp;
     elm_split.volume = elm_split.findVolume();
@@ -361,14 +361,23 @@ Interface.prototype.subdivide = function () {
     subElement.fill(elm_push.fluid, elm_push.pressure);
     elm_split.fill(elm_split.fluid, elm_split.pressure);
 
+    //go to the interface that's on the other side of elm_split and add this interface's velocity to it
+    for (let i = 0, l = elm_split.interfaces.length; i < l; i++) {
+      let iface = elm_split.interfaces[i];
+      if(iface != this) {
+        iface.velocity += this.velocity;
+      }
+    }
+
     //unhook this interface from elm_split and elm_push;
-    console.log('interfaces: ' + elm_split.interfaces);
     this.disconnect();
+    console.log(this.elements);
 
     // create a subInterface between subElement and elm_split
-    connectElements(elm_push, subElement);
+    connectElements(elm_push, subElement, false, this.velocity);
+
     console.log(elm_split);
-    connectElements(subElement, elm_split, true);
+    connectElements(subElement, elm_split, true, this.velocity);
     //store original 'elements' list in history of THIS interface
     this.history.push(this.elements);
 
