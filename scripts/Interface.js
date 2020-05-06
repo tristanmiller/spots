@@ -9,7 +9,10 @@ function Interface (elements, sub) {
   this.massFlow = 0;
   this.depth = 0;
   this.history = [];
-  this.sub = sub;
+  if(sub) {
+    this.sub = sub;
+  } else {this.sub = false;}
+
   this.fresh = false;
   this.active = true;
   this.determineEnds();
@@ -19,7 +22,28 @@ function Interface (elements, sub) {
   } else {
   g_interfaces.push(this);
   }
-  console.log(g_interfaces.length);
+  //console.log(g_interfaces.length);
+}
+
+Interface.prototype.disconnect = function () {
+  //go to each element on this Interface, find its Interfaces, remove THIS Interface
+  for (let i = 0, l = this.elements.length; i < l; i++) {
+    let elm = this.elements[i];
+    for (let j = 0, n = elm.interfaces.length; j < n; j++) {
+      let iface = elm.interfaces[j];
+      if(iface == this) {
+        if(n > 1) {
+          console.log(n);
+          elm.interfaces.splice[j,1];
+        } else {
+          elm.interfaces = [];
+        }
+        break;
+      }
+    }
+  }
+  //deactivate this Interface
+  this.active = false;
 }
 
 Interface.prototype.determineEnds = function () {
@@ -34,9 +58,7 @@ Interface.prototype.determineEnds = function () {
   } else {
     // take elm1's end to be connected to elm2's start
     this.ends = ['end', 'start'];
-
   }
-
 }
 
 Interface.prototype.calculatePressureForce = function (elm1, elm2) {
@@ -197,10 +219,12 @@ Interface.prototype.move = function () {
   let elm1 = this.elements[0];
   let elm2 = this.elements[1];
 
+
   let elm_grow = elm1;
   let elm_shrink = elm2;
   let adjust = this.ends[1];
-  if (this.massFlow < 0) { elm_grow = elm2; elm_shrink = elm1; this.ends[0];}
+
+  if (this.massFlow < 0) { elm_grow = elm2; elm_shrink = elm1; adjust = this.ends[0];}
 
   let mass = Math.abs(this.massFlow);
   let rho = Math.max(elm_grow.rho, elm_shrink.rho);
@@ -236,7 +260,14 @@ Interface.prototype.move = function () {
 
     //do the thing that removes the shrinky element
     //find the relevant interfaces and stitch them into the victorious element
+
     //it's also worth knowing if the interface in question is a subInterface, too.
+    //TODO: see how new 'disconnect' method can be useful here.
+    // ie disconnect this interface.
+    // disconnect this other interface
+    // connect elm_grow to the other elm
+    // transfer 'sub' status to the new interface.
+
     let shrink_interfaces = elm_shrink.interfaces;
     for (let i = 0, l = shrink_interfaces.length; i < l; i++) {
       //ignore if we end up talking about this element,
@@ -244,7 +275,9 @@ Interface.prototype.move = function () {
       //also, copy the 'sub' status from that interface
       let iface = shrink_interfaces[i];
       if(iface != this) {
+        console.log(iface);
         this.sub = iface.sub;
+        iface.active = false;
         //cycle through the elements of iface
         for (let j = 0, n = iface.elements.length; j < n; j++) {
           let elm = iface.elements[i];
@@ -254,10 +287,10 @@ Interface.prototype.move = function () {
             break;
           }
         }
-
       }
     }
     //disable the 'dead' element and disable the 'subInterface'
+    elm_shrink.active = false;
   }
 
 
@@ -327,14 +360,17 @@ Interface.prototype.subdivide = function () {
     // fill subElement with the elm_push's fluid
     subElement.fill(elm_push.fluid, elm_push.pressure);
     elm_split.fill(elm_split.fluid, elm_split.pressure);
+
+    //unhook this interface from elm_split and elm_push;
+    console.log('interfaces: ' + elm_split.interfaces);
+    this.disconnect();
+
     // create a subInterface between subElement and elm_split
     connectElements(elm_push, subElement);
+    console.log(elm_split);
     connectElements(subElement, elm_split, true);
     //store original 'elements' list in history of THIS interface
     this.history.push(this.elements);
-    // rewire THIS interface to work between elm_push and subElement
-    this.elements = [elm_push, subElement];
-    this.determineEnds();
 
   }
 }

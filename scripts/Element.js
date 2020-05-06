@@ -21,6 +21,7 @@ function Element(diameter, length, angle, pos_start){
   this.parentElement = '';
   this.sub_elements = [];
   this.flows = [];
+  this.active = true;
   g_elements.push(this);
 }
 

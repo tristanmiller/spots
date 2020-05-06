@@ -119,18 +119,27 @@ console.log(g_interfaces);
 function visualise() {
   for (let p = 0, l = INTERVALS; p < l; p++){
     for (let i = 0, l = g_subInterfaces.length; i < l; i++) {
-      g_subInterfaces[i].calculateMassFlows();
-      g_subInterfaces[i].resolveMassFlows();
+      let thisInterface = g_subInterfaces[i];
+      if (thisInterface.active) {
+        thisInterface.calculateMassFlows();
+        thisInterface.resolveMassFlows();
+      }
     }
 
 
     for (let i = 0, l = g_interfaces.length; i < l; i++) {
-      g_interfaces[i].calculateMassFlows();
-      g_interfaces[i].resolveMassFlows();
+      let thisInterface = g_interfaces[i];
+      if (thisInterface.active) {
+        thisInterface.calculateMassFlows();
+        thisInterface.resolveMassFlows();
+      }
     }
 
     for (let i = 0, l = g_elements.length; i < l; i++) {
-      g_elements[i].update();
+      let thisElement = g_elements[i];
+      if (thisElement.active) {
+        thisElement.update();
+      }
     }
   }
 
@@ -159,7 +168,7 @@ function visualise() {
     elm_div.innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + Math.round(1000*vel*area*1000)/1000 +'L/s <br>' + elm.elm_length;
   }
 
-  requestAnimationFrame (visualise);
+  // requestAnimationFrame (visualise);
 }
 
 let viewport = document.getElementsByClassName('viewport')[0];
