@@ -13,7 +13,7 @@ const MU_A = 1.48e-5; //m^2/s
 const ETA_A = 1.81e-5; //Pa.s
 
 const TIME_STEP = 0.0001; // seconds
-const INTERVALS = 1000;//Math.round(1/TIME_STEP);
+const INTERVALS = 10000;//Math.round(1/TIME_STEP);
 
 const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 1; //global friction constant - should be a function of medium and hose material
@@ -67,7 +67,7 @@ function Fluid (pressure_ref, rho_ref, K, mu, eta, pressure_cav) {
 const water = new Fluid (PR_W, RHO_W, K_W, MU_W, ETA_W, 3e3);
 const air = new Fluid (PR_A, RHO_A, K_A, MU_A, ETA_A);
 
-let sink1 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, 1.4*air.PR, air);
+let sink1 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, 1.0*air.PR, air);
 let pippy = new Pipe(PIPE_DIAMETER, 5*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
 pippy.fill(water);
 let testy = pippy.elements[1];
@@ -75,14 +75,14 @@ testy.diameter = RESTRICTION_DIAMETER;
 testy.fill(water, water.PR);
 console.log(testy);
 testy.update();
-pippy.elements[0].fill(water, water.PR);
+pippy.elements[0].fill(air, water.PR);
 pippy.elements[0].update();
 
 console.log(testy.pressure);
 console.log(pippy);
 
 
-let sink2 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1.0*air.PR, water);
+let sink2 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1.1*air.PR, water);
 
 sink1.pos_start.x -= sink1.directionCosine*sink1.elm_length;
 sink1.pos_start.z -= sink1.directionSine*sink1.elm_length;
@@ -154,8 +154,8 @@ function visualise() {
     //should average the velocities across an element instead of reporting vel at one end...
     if(elm.interfaces[1]) {
 
-      vel = elm.interfaces[1].velocity;
-      area = elm.interfaces[1].area;
+      vel = elm.velocity;
+      area = elm.area;
     } else {
       vel = 0;
       area = 0;

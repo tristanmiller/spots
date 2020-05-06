@@ -35,7 +35,7 @@ Interface.prototype.disconnect = function () {
       if(iface == this) {
         if(n > 1) {
           //console.log(n);
-          elm.interfaces.splice[j,1];
+          elm.interfaces.splice(j,1);
         } else {
           elm.interfaces = [];
         }
@@ -249,10 +249,6 @@ Interface.prototype.move = function () {
 
   if(elm_shrink.elm_length > MULTIPHASE_MIN_LENGTH) {
     //keep adjusting the interphase boundary as normal
-    elm_shrink.volume = elm_shrink.findVolume();
-    elm_shrink.findMass();
-    elm_shrink.findDensity();
-    elm_shrink.newPressureFromDensity(elm_shrink.fluid.PR, elm_shrink.fluid.RHO, elm_shrink.fluid.K);
   } else {
     //snap the shrunken element out of existence
     console.log('getting rid of shrinky');
@@ -263,6 +259,7 @@ Interface.prototype.move = function () {
     // get the interface on elm_shrink that isn't THIS interface
     // get the element on intA that isn't elm_shrink
     let shrink_interfaces = elm_shrink.interfaces;
+    console.log(shrink_interfaces);
     let intA = shrink_interfaces[0];
 
     for (let i = 0, l = shrink_interfaces.length; i < l; i++) {
@@ -319,7 +316,6 @@ Interface.prototype.move = function () {
 
 
 Interface.prototype.subdivide = function () {
-  console.log('subdividing');
   let elm1 = this.elements[0];
   let elm2 = this.elements[1];
 
@@ -341,7 +337,6 @@ Interface.prototype.subdivide = function () {
     length_disp = MULTIPHASE_MIN_LENGTH;
     // OR always just project into elm_split the MULTIPHASE_MIN_LENGTH?
     elm_split.elm_length -= length_disp;
-    elm_split.volume = elm_split.findVolume();
     let subElement = new Element(elm_split.diameter, length_disp, elm_split.angle, elm_split.pos_start);
 
     if (adjust == 'start') {
@@ -374,15 +369,18 @@ Interface.prototype.subdivide = function () {
 
     //unhook this interface from elm_split and elm_push;
     this.disconnect();
-    // console.log(this.elements);
-
+    console.log(this.elements);
+    console.log(elm_push.interfaces);
+    console.log(elm_split.interfaces);
     // create a subInterface between subElement and elm_split
-    connectElements(elm_push, subElement, false, this.velocity);
+    connectElements(elm_push, subElement, false);//, this.velocity);
 
     // console.log(elm_split);
-    connectElements(subElement, elm_split, true, this.velocity);
+    connectElements(subElement, elm_split, true);//, this.velocity);
     //store original 'elements' list in history of THIS interface
     // this.history.push(this.elements);
 
+  } else if (elm_split.type == 'sink') {
+    elm_push.mass -= this.massFlow;
   }
 }
