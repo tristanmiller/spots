@@ -13,7 +13,7 @@ function Interface (elements, sub, vel) {
   if(sub) {
     this.sub = sub;
   } else {this.sub = false;}
-
+  this.area = this.findArea();
   this.fresh = false;
   this.active = true;
   this.determineEnds();
@@ -26,6 +26,15 @@ function Interface (elements, sub, vel) {
   //console.log(g_interfaces.length);
 }
 
+Interface.prototype.findArea = function () {
+  let area = 0;
+  if (this.elements) {
+    area = this.elements[0].area;
+    for (let i = 0, l = this.elements.length; i < l; i++) {
+      if (this.elements[i].area < area) { area = this.elements[i].area; }
+    }
+  }
+}
 Interface.prototype.disconnect = function () {
   //go to each element on this Interface, find its Interfaces, remove THIS Interface
   for (let i = 0, l = this.elements.length; i < l; i++) {
@@ -230,8 +239,8 @@ Interface.prototype.move = function () {
   if (this.massFlow < 0) { elm_grow = elm2; elm_shrink = elm1; adjust = this.ends[0];}
 
   let mass = Math.abs(this.massFlow);
-  let rho = Math.max(elm_grow.rho, elm_shrink.rho);
-  let vol_disp = mass/elm_grow.rho;
+  let rho = Math.min(elm_grow.rho, elm_shrink.rho);
+  let vol_disp = mass/rho;
   let length_disp = vol_disp/elm_shrink.elm_length;
 
   // length_disp is distance the interface will be moved
@@ -253,8 +262,6 @@ Interface.prototype.move = function () {
     //keep adjusting the interphase boundary as normal
   } else {
     //snap the shrunken element out of existence
-    console.log('getting rid of shrinky');
-        console.log(elm_shrink);
     //do the thing that removes the shrinky element
     //find the relevant interfaces and stitch them into the victorious element
 
@@ -262,7 +269,6 @@ Interface.prototype.move = function () {
     // get the interface on elm_shrink that isn't THIS interface
     // get the element on intA that isn't elm_shrink
     let shrink_interfaces = elm_shrink.interfaces;
-    console.log(shrink_interfaces);
     let intA = shrink_interfaces[0];
 
     for (let i = 0, l = shrink_interfaces.length; i < l; i++) {
@@ -288,13 +294,16 @@ Interface.prototype.move = function () {
     this.disconnect();
     elm_shrink.active = false;
 
-    let avgVel = 0.5*(intA.velocity + this.velocity);
     //connect elm_grow with elm (creating a new Interface)
     //confer intA's 'sub' status to this new interface, and give it the avg vel of the two it replaces.
-    connectElements(elm_grow, elm, intA.sub, avgVel);
-
+    if(adjust == 'start') {
+      connectElements(elm_grow, elm, intA.sub, this.velocity);
+    } else if(adjust == 'end') {
+      connectElements(elm, elm_grow, intA.sub, this.velocity);
+    }
   }
-  elm_grow.fill(elm_grow.fluid, elm_grow.pressure);
+
+  //elm_grow.fill(elm_grow.fluid, elm_grow.pressure);
 
 
 
@@ -330,7 +339,7 @@ Interface.prototype.subdivide = function () {
   if (this.massFlow < 0) { elm_push = elm2; elm_split = elm1; adjust = this.ends[0]; }
   if(elm_split.type != 'sink') {
     let mass = Math.abs(this.massFlow);
-    let rho = Math.max(elm_push.rho, elm_split.rho);
+    let rho = Math.min(elm_push.rho, elm_split.rho);
     let vol_disp = mass/rho;
     let length_disp = vol_disp/elm_split.elm_length;
 
@@ -370,17 +379,16 @@ Interface.prototype.subdivide = function () {
 
     //unhook this interface from elm_split and elm_push;
     this.disconnect();
-    console.log(this.elements);
-    console.log(elm_push.interfaces);
-    console.log(elm_split.interfaces);
-    // create a subInterface between subElement and elm_split
-    // do we need to select between -vel and +vel, depending on adjust?
-    connectElements(elm_push, subElement, false, this.velocity);
 
-    // console.log(elm_split);
-    connectElements(elm_split,subElement, true, this.velocity);
-    //store original 'elements' list in history of THIS interface
-    // this.history.push(this.elements);
+    if(adjust == 'start') {
+      connectElements(elm_push, subElement, false, this.velocity);
+      connectElements(subElement, elm_split, true, this.velocity);
+    } else if(adjust == 'end') {
+      connectElements(subElement, elm_push, false, this.velocity);
+      connectElements(elm_split, subElement, true, this.velocity);
+    }
+
+
 
   } else if (elm_split.type == 'sink') {
     elm_push.mass -= this.massFlow;

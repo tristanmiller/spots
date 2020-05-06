@@ -148,10 +148,12 @@ Element.prototype.checkMassFlows = function () {
 }
 
 Element.prototype.updateDiv = function () {
+  this.elm_div.style.transform = 'rotateZ(' + this.angle*180/Math.PI + 'deg)';
+  this.elm_div.style.width = 50*this.elm_length + 'px';
   this.elm_div.style.top = 50*this.pos_start.z + 'px';
   this.elm_div.style.left = 50*this.pos_start.x + 'px';
-  this.elm_div.style.width = 50*this.elm_length + 'px';
-  this.elm_div.style.transform = 'rotateZ(' + this.angle*180/Math.PI + 'deg)';
+
+
 }
 
 Element.prototype.createDiv = function () {
