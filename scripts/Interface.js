@@ -34,7 +34,7 @@ Interface.prototype.disconnect = function () {
       let iface = elm.interfaces[j];
       if(iface == this) {
         if(n > 1) {
-          console.log(n);
+          //console.log(n);
           elm.interfaces.splice[j,1];
         } else {
           elm.interfaces = [];
@@ -248,12 +248,14 @@ Interface.prototype.move = function () {
 
 
   if(elm_shrink.elm_length > MULTIPHASE_MIN_LENGTH) {
+    //keep adjusting the interphase boundary as normal
     elm_shrink.volume = elm_shrink.findVolume();
     elm_shrink.findMass();
     elm_shrink.findDensity();
     elm_shrink.newPressureFromDensity(elm_shrink.fluid.PR, elm_shrink.fluid.RHO, elm_shrink.fluid.K);
   } else {
-
+    //snap the shrunken element out of existence
+    console.log('getting rid of shrinky');
     //do the thing that removes the shrinky element
     //find the relevant interfaces and stitch them into the victorious element
 
@@ -292,6 +294,7 @@ Interface.prototype.move = function () {
     connectElements(elm_grow, elm, intA.sub, avgVel);
 
   }
+  elm_grow.fill(elm_grow.fluid, elm_grow.pressure);
 
 
 
@@ -316,6 +319,7 @@ Interface.prototype.move = function () {
 
 
 Interface.prototype.subdivide = function () {
+  console.log('subdividing');
   let elm1 = this.elements[0];
   let elm2 = this.elements[1];
 
@@ -347,7 +351,6 @@ Interface.prototype.subdivide = function () {
       elm_split.pos_middle =  elm_split.findPosMiddle();
 
     } else if (adjust == 'end') {
-      console.log('end');
       // calculate new end position for elm_split
       elm_split.pos_end = elm_split.findPosEnd();
       elm_split.pos_middle = elm_split.findPosMiddle();
@@ -371,15 +374,15 @@ Interface.prototype.subdivide = function () {
 
     //unhook this interface from elm_split and elm_push;
     this.disconnect();
-    console.log(this.elements);
+    // console.log(this.elements);
 
     // create a subInterface between subElement and elm_split
     connectElements(elm_push, subElement, false, this.velocity);
 
-    console.log(elm_split);
+    // console.log(elm_split);
     connectElements(subElement, elm_split, true, this.velocity);
     //store original 'elements' list in history of THIS interface
-    this.history.push(this.elements);
+    // this.history.push(this.elements);
 
   }
 }
