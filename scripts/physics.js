@@ -168,7 +168,7 @@ function visualise() {
     elm_div.innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + Math.round(1000*vel*area*1000)/1000 +'L/s <br>' + elm.elm_length;
   }
 
-  requestAnimationFrame (visualise);
+  // requestAnimationFrame (visualise);
 }
 
 let viewport = document.getElementsByClassName('viewport')[0];

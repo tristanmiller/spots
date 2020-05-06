@@ -186,32 +186,34 @@ Interface.prototype.calculateMassFlows = function (time_step) {
 };
 
 Interface.prototype.resolveMassFlows = function () {
-  let elm1 = this.elements[0];
-  let elm2 = this.elements[1];
+  if(this.massFlow != 0) {
+    let elm1 = this.elements[0];
+    let elm2 = this.elements[1];
 
-  //do update process for sub-interfaces before regular interfaces
-  //do creation of sub-interfaces and elements after regular interfaces
+    //do update process for sub-interfaces before regular interfaces
+    //do creation of sub-interfaces and elements after regular interfaces
 
-  if(elm1.fluid == elm2.fluid) {
-    if(this.sub) {
-      //do subinterface thing (in this case, merge the elements across the interface)
-      //delete/deactivate the interface and hook up the merged element to the correct interfaces
-    } else {
-      //move mass from one element to the other
-      elm1.mass -= this.massFlow;
-      elm2.mass += this.massFlow;
-    }
+    if(elm1.fluid == elm2.fluid) {
+      if(this.sub) {
+        //do subinterface thing (in this case, merge the elements across the interface)
+        //delete/deactivate the interface and hook up the merged element to the correct interfaces
+      } else {
+        //move mass from one element to the other
+        elm1.mass -= this.massFlow;
+        elm2.mass += this.massFlow;
+      }
 
-  } else if (elm1.fluid != elm2.fluid) {
-    if (this.sub) {
-      //do subinterface thing (in this case, shift position of fluid boundary)
-      //collapse elements as necessary, deactivate and restore interfaces
-      this.move();
-    } else {
-      //mark for subdivision (place on subdiv list) to be handled at end of cycle
-      this.subdivide();
-      //create subelement and sub interface
-      //rejig interfaces and element boundaries to suit.
+    } else if (elm1.fluid != elm2.fluid) {
+      if (this.sub) {
+        //do subinterface thing (in this case, shift position of fluid boundary)
+        //collapse elements as necessary, deactivate and restore interfaces
+        this.move();
+      } else {
+        //mark for subdivision (place on subdiv list) to be handled at end of cycle
+        this.subdivide();
+        //create subelement and sub interface
+        //rejig interfaces and element boundaries to suit.
+      }
     }
   }
 }
@@ -252,6 +254,7 @@ Interface.prototype.move = function () {
   } else {
     //snap the shrunken element out of existence
     console.log('getting rid of shrinky');
+        console.log(elm_shrink);
     //do the thing that removes the shrinky element
     //find the relevant interfaces and stitch them into the victorious element
 
@@ -310,8 +313,6 @@ Interface.prototype.move = function () {
     elm_grow.pos_start = elm_shrink.pos_end;
     elm_grow.pos_middle = elm_grow.findPosMiddle();
   }
-
-
 }
 
 
@@ -373,10 +374,11 @@ Interface.prototype.subdivide = function () {
     console.log(elm_push.interfaces);
     console.log(elm_split.interfaces);
     // create a subInterface between subElement and elm_split
-    connectElements(elm_push, subElement, false);//, this.velocity);
+    // do we need to select between -vel and +vel, depending on adjust?
+    connectElements(elm_push, subElement, false, this.velocity);
 
     // console.log(elm_split);
-    connectElements(subElement, elm_split, true);//, this.velocity);
+    connectElements(elm_split,subElement, true, this.velocity);
     //store original 'elements' list in history of THIS interface
     // this.history.push(this.elements);
 
