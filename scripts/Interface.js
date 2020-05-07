@@ -251,7 +251,7 @@ Interface.prototype.move = function () {
   if (elm_shrink.elm_length - length_disp < MULTIPHASE_MIN_LENGTH) {
     length_disp = elm_shrink.elm_length;
     elm_shrink.elm_length = 0;
-    elm_grow.elm_length = elm_shrink.elm_length_0;
+    elm_grow.elm_length += length_disp;
   } else {
       elm_grow.elm_length += length_disp;
       elm_shrink.elm_length -= length_disp;
