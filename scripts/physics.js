@@ -13,7 +13,7 @@ const MU_A = 1.48e-5; //m^2/s
 const ETA_A = 1.81e-5; //Pa.s
 
 const TIME_STEP = 0.0001; // seconds
-const INTERVALS = 10000;//Math.round(1/TIME_STEP);
+let INTERVALS = 10000;//Math.round(1/TIME_STEP);
 
 const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 1; //global friction constant - should be a function of medium and hose material
@@ -97,7 +97,7 @@ connectElements(sink1, pippy.startElement);
 connectElements(pippy.endElement, sink2);
 
 for (let i = 0, l = g_elements.length; i < l; i++) {
-g_elements[i].createDiv();
+  g_elements[i].createDiv();
 }
 
 // TESTING ONLY
@@ -124,8 +124,10 @@ function visualise() {
     for (let i = 0, l = g_subInterfaces.length; i < l; i++) {
       let thisInterface = g_subInterfaces[i];
       if (thisInterface.active) {
-        thisInterface.calculateMassFlows();
-        thisInterface.resolveMassFlows();
+        if (!thisInterface.fresh) {
+          thisInterface.calculateMassFlows();
+          thisInterface.resolveMassFlows();
+        } else {thisInterface.fresh = false;}
       }
     }
 
@@ -133,8 +135,10 @@ function visualise() {
     for (let i = 0, l = g_interfaces.length; i < l; i++) {
       let thisInterface = g_interfaces[i];
       if (thisInterface.active) {
-        thisInterface.calculateMassFlows();
-        thisInterface.resolveMassFlows();
+        if (!thisInterface.fresh) {
+          thisInterface.calculateMassFlows();
+          thisInterface.resolveMassFlows();
+        } else {thisInterface.fresh = false;}
       }
     }
 
@@ -174,7 +178,7 @@ function visualise() {
     elm_div.innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + Math.round(1000*vel*area*1000)/1000 +'L/s <br>' + elm.elm_length;
   }
 
-  requestAnimationFrame (visualise);
+  // requestAnimationFrame (visualise);
 }
 
 let viewport = document.getElementsByClassName('viewport')[0];

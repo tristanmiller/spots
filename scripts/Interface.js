@@ -14,7 +14,7 @@ function Interface (elements, sub, vel) {
     this.sub = sub;
   } else {this.sub = false;}
   this.area = this.findArea();
-  this.fresh = false;
+  this.fresh = true;
   this.active = true;
   this.determineEnds();
   if(sub) {
@@ -265,7 +265,7 @@ Interface.prototype.move = function () {
     //do the thing that removes the shrinky element
     //find the relevant interfaces and stitch them into the victorious element
 
-
+    console.log('shrinky goes bye bye: ' + elm_shrink.fluid.RHO );
     // get the interface on elm_shrink that isn't THIS interface
     // get the element on intA that isn't elm_shrink
     let shrink_interfaces = elm_shrink.interfaces;
@@ -373,10 +373,9 @@ Interface.prototype.subdivide = function () {
     for (let i = 0, l = elm_split.interfaces.length; i < l; i++) {
       let iface = elm_split.interfaces[i];
       if(iface != this) {
-        iface.velocity += this.velocity;
+        //iface.velocity += this.velocity;
       }
     }
-
     //unhook this interface from elm_split and elm_push;
     this.disconnect();
 
@@ -387,8 +386,6 @@ Interface.prototype.subdivide = function () {
       connectElements(subElement, elm_push, false, this.velocity);
       connectElements(elm_split, subElement, true, this.velocity);
     }
-
-
 
   } else if (elm_split.type == 'sink') {
     elm_push.mass -= this.massFlow;

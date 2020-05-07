@@ -19,6 +19,7 @@
 	overflow: hidden;
 	width:0%;
 	color: red;
+	user-select: none;
 }
 
 .sink {
