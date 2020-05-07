@@ -13,7 +13,7 @@ const MU_A = 1.48e-5; //m^2/s
 const ETA_A = 1.81e-5; //Pa.s
 
 const TIME_STEP = 0.0001; // seconds
-let INTERVALS = 10;//Math.round(1/TIME_STEP);
+let INTERVALS = 10000;//Math.round(1/TIME_STEP);
 
 const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 1; //global friction constant - should be a function of medium and hose material
@@ -25,7 +25,7 @@ const RECURSION_LIMIT = 0;
 const MULTIPHASE_MIN_LENGTH = 0.15; //snapping length for sub-elements
 
 const ELEMENT_LENGTH = 2; //metres
-let PIPE_ANGLE = 0.1*Math.PI; //radians
+let PIPE_ANGLE = -0.5*Math.PI; //radians
 const PIPE_DIAMETER = 0.064; //metres
 const RESTRICTION_DIAMETER = 0.064; //metres
 let elm_container = document.getElementsByClassName('elm_container')[0];
@@ -73,9 +73,9 @@ const air = new Fluid (PR_A, RHO_A, K_A, MU_A, ETA_A);
 let sink1 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, 1.0*air.PR, water);
 let pippy = new Pipe(PIPE_DIAMETER, 5*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
 pippy.fill(water);
-let testy = pippy.elements[3];
+let testy = pippy.elements[2];
 testy.diameter = RESTRICTION_DIAMETER;
-testy.fill(air, 1.4*water.PR);
+testy.fill(water, water.PR);
 console.log(testy);
 testy.update();
 // pippy.elements[0].fill(water, 1.00*water.PR);

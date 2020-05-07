@@ -363,16 +363,16 @@ Interface.prototype.subdivide = function () {
 
 
     //unhook this interface from elm_split and elm_push;
-    // this.disconnect();
+     this.disconnect();
     // no - just replace elm_split on THIS interface with subElement
-    this.replaceElement(this, elm_split, subElement);
+    //this.replaceElement(this, elm_split, subElement);
 
 
     if(elm_push == elm1) {
-      //connectElements(elm_push, subElement, false, this.velocity);
+      connectElements(elm_push, subElement, false, this.velocity);
       connectElements(subElement, elm_split, true, this.velocity);
     } else if(elm_push == elm2) {
-      //connectElements(subElement, elm_push, false, this.velocity);
+      connectElements(subElement, elm_push, false, this.velocity);
       connectElements(elm_split, subElement, true, this.velocity);
     }
 
@@ -380,11 +380,11 @@ Interface.prototype.subdivide = function () {
     //the direction of connection seems to be crucially important somehow.
     //need to figure this out!
     if (elm_split == elm1) {
-      //elm1.mass -= this.massFlow;
+      elm1.mass -= this.massFlow;
       elm2.mass += this.massFlow;
     } else if (elm_split == elm2) {
       elm1.mass -= this.massFlow;
-      //elm2.mass += this.massFlow;
+      elm2.mass += this.massFlow;
     }
   }
 }
