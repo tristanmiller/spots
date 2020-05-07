@@ -25,7 +25,7 @@ const RECURSION_LIMIT = 0;
 const MULTIPHASE_MIN_LENGTH = 0.15; //snapping length for sub-elements
 
 const ELEMENT_LENGTH = 2; //metres
-let PIPE_ANGLE = -0.5*Math.PI; //radians
+let PIPE_ANGLE =  0*Math.PI; //radians
 const PIPE_DIAMETER = 0.064; //metres
 const RESTRICTION_DIAMETER = 0.064; //metres
 let elm_container = document.getElementsByClassName('elm_container')[0];
@@ -75,7 +75,7 @@ let pippy = new Pipe(PIPE_DIAMETER, 5*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
 pippy.fill(water);
 let testy = pippy.elements[2];
 testy.diameter = RESTRICTION_DIAMETER;
-testy.fill(water, water.PR);
+testy.fill(air, 1.3*water.PR);
 console.log(testy);
 testy.update();
 // pippy.elements[0].fill(water, 1.00*water.PR);
