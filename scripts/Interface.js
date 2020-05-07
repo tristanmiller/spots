@@ -265,7 +265,7 @@ Interface.prototype.move = function () {
     //do the thing that removes the shrinky element
     //find the relevant interfaces and stitch them into the victorious element
 
-    console.log('shrinky goes bye bye: ' + elm_shrink.fluid.RHO );
+    console.log('shrinky goes bye bye: ');
     // get the interface on elm_shrink that isn't THIS interface
     // get the element on intA that isn't elm_shrink
     let shrink_interfaces = elm_shrink.interfaces;
@@ -293,19 +293,17 @@ Interface.prototype.move = function () {
     intA.disconnect();
     this.disconnect();
     elm_shrink.active = false;
+    elm_grow.volume = elm_grow.findVolume();
+    elm_grow.fill(elm_grow.fluid, elm_grow.pressure);
 
     //connect elm_grow with elm (creating a new Interface)
     //confer intA's 'sub' status to this new interface, and give it the avg vel of the two it replaces.
-    if(adjust == 'start') {
+    if(elm_grow == elm1) {
       connectElements(elm_grow, elm, intA.sub, this.velocity);
-    } else if(adjust == 'end') {
+    } else if(elm_grow == elm2) {
       connectElements(elm, elm_grow, intA.sub, this.velocity);
     }
   }
-
-  //elm_grow.fill(elm_grow.fluid, elm_grow.pressure);
-
-
 
   if(adjust == 'start') {
     //increase elm_grow's length, find new pos_end
@@ -379,15 +377,22 @@ Interface.prototype.subdivide = function () {
     //unhook this interface from elm_split and elm_push;
     this.disconnect();
 
-    if(adjust == 'start') {
+    if(elm_push == elm1) {
       connectElements(elm_push, subElement, false, this.velocity);
       connectElements(subElement, elm_split, true, this.velocity);
-    } else if(adjust == 'end') {
+    } else if(elm_push == elm2) {
       connectElements(subElement, elm_push, false, this.velocity);
       connectElements(elm_split, subElement, true, this.velocity);
     }
 
   } else if (elm_split.type == 'sink') {
-    elm_push.mass -= this.massFlow;
+    if (elm_split == elm1) {
+      //elm1.mass -= this.massFlow;
+      elm2.mass += this.massFlow;
+    } else if (elm_split == elm2) {
+      elm1.mass -= this.massFlow;
+      //elm2.mass += this.massFlow;
+    }
+
   }
 }

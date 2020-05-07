@@ -21,11 +21,11 @@ const VELOCITY_LIMIT = 1000; //ms^-1 //little hack to stop things getting too cr
 const VELOCITY_THRESHOLD = 1e-8;  //how much precision for velocity?
 
 const SUB_STEPS = 10;
-const RECURSION_LIMIT = 1;
+const RECURSION_LIMIT = 0;
 const MULTIPHASE_MIN_LENGTH = 0.15; //snapping length for sub-elements
 
 const ELEMENT_LENGTH = 2; //metres
-const PIPE_ANGLE = 0.01*Math.PI; //radians
+let PIPE_ANGLE = -0.2*Math.PI; //radians
 const PIPE_DIAMETER = 0.064; //metres
 const RESTRICTION_DIAMETER = 0.064; //metres
 let elm_container = document.getElementsByClassName('elm_container')[0];
@@ -73,13 +73,13 @@ const air = new Fluid (PR_A, RHO_A, K_A, MU_A, ETA_A);
 let sink1 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, 1.0*air.PR, water);
 let pippy = new Pipe(PIPE_DIAMETER, 5*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
 pippy.fill(water);
-let testy = pippy.elements[2];
+let testy = pippy.elements[0];
 testy.diameter = RESTRICTION_DIAMETER;
 testy.fill(air, 1.4*water.PR);
 console.log(testy);
 testy.update();
-pippy.elements[0].fill(water, 1.00*water.PR);
-pippy.elements[0].update();
+// pippy.elements[0].fill(water, 1.00*water.PR);
+// pippy.elements[0].update();
 
 console.log(testy.pressure);
 console.log(pippy);
@@ -93,7 +93,7 @@ sink1.pos_start.z -= sink1.directionSine*sink1.elm_length;
 sink1.pos_end = sink1.findPosEnd();
 sink1.pos_middle = sink1.findPosMiddle();
 
-connectElements(sink1, pippy.startElement);
+connectElements(pippy.startElement, sink1);
 connectElements(pippy.endElement, sink2);
 
 for (let i = 0, l = g_elements.length; i < l; i++) {
@@ -178,7 +178,7 @@ function visualise() {
     elm_div.innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + Math.round(1000*vel*area*1000)/1000 +'L/s <br>' + elm.elm_length;
   }
 
-  // requestAnimationFrame (visualise);
+  requestAnimationFrame (visualise);
 }
 
 let viewport = document.getElementsByClassName('viewport')[0];

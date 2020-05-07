@@ -105,55 +105,12 @@ Element.prototype.fill = function (fluid, pressure) {
   this.findMass();
 }
 
-Element.prototype.checkMassFlows = function () {
-
-  //go through list of flows
-  //work out if there is a net loss of mass
-  //if so, work out whether it results in 'too low' density
-  //if so, scale the -ve flows appropriately
-  //scale the velocities on the corresponding interfaces appropriately
-
-    let net_massFlow = 0;
-    let inflows = [];
-    let outflows = [];
-    let outflow = 0;
-    for (let i = 0, l = this.flows.length; i < l; i++) {
-      let flow = this.flows[i];
-      net_massFlow += flow[0];
-      if (flow[0] < 0) {
-        outflows.push(this.flows[i]);
-        outflow += flow[0];}
-      else {inflows.push(flow);}
-    }
-
-    let mass_critical = this.volume*this.fluid.RHO_Critical;
-
-    if(this.mass + net_massFlow < mass_critical) {
-      //find the outflow that will bring the mass to mass_critical
-      let max_outflow = mass_critical - this.mass;
-      //find a scaling factor i.e. desired/actual outflow
-      let scale_factor = max_outflow/outflow;
-      if(scale_factor < 0) {scale_factor = 0;} else if (scale_factor > 1) {scale_factor = 1;}
-      // console.log(scale_factor);
-      //scale each of the flows in the outflows list. Also scale the velocities of the corresponding interfaces
-      for (let i = 0, l = this.flows.length; i < l; i++) {
-        if(this.flows[i][0] < 0){
-          this.flows[i][0] = this.flows[i][0]*scale_factor;
-          this.flows[i][1].velocity = this.flows[i][1].velocity*scale_factor;
-          this.flows[i][1].massFlow = this.flows[i][1].massFlow*scale_factor;
-        }
-      }
-      return true;
-    } else {return false;}
-}
 
 Element.prototype.updateDiv = function () {
   this.elm_div.style.transform = 'rotateZ(' + this.angle*180/Math.PI + 'deg)';
   this.elm_div.style.width = 50*this.elm_length + 'px';
   this.elm_div.style.top = 50*this.pos_start.z + 'px';
   this.elm_div.style.left = 50*this.pos_start.x + 'px';
-
-
 }
 
 Element.prototype.createDiv = function () {
@@ -163,4 +120,47 @@ Element.prototype.createDiv = function () {
   this.updateDiv();
   if(this.type == 'sink') {this.elm_div.classList.add('sink');}
   elm_container.appendChild(this.elm_div);
+}
+
+
+Element.prototype.checkMassFlows = function () {
+
+  //go through list of flows
+  //work out if there is a net loss of mass
+  //if so, work out whether it results in 'too low' density
+  //if so, scale the -ve flows appropriately
+  //scale the velocities on the corresponding interfaces appropriately
+
+  let net_massFlow = 0;
+  let inflows = [];
+  let outflows = [];
+  let outflow = 0;
+  for (let i = 0, l = this.flows.length; i < l; i++) {
+    let flow = this.flows[i];
+    net_massFlow += flow[0];
+    if (flow[0] < 0) {
+      outflows.push(this.flows[i]);
+      outflow += flow[0];}
+    else {inflows.push(flow);}
+  }
+
+  let mass_critical = this.volume*this.fluid.RHO_Critical;
+
+  if(this.mass + net_massFlow < mass_critical) {
+    //find the outflow that will bring the mass to mass_critical
+    let max_outflow = mass_critical - this.mass;
+    //find a scaling factor i.e. desired/actual outflow
+    let scale_factor = max_outflow/outflow;
+    if(scale_factor < 0) {scale_factor = 0;} else if (scale_factor > 1) {scale_factor = 1;}
+    // console.log(scale_factor);
+    //scale each of the flows in the outflows list. Also scale the velocities of the corresponding interfaces
+    for (let i = 0, l = this.flows.length; i < l; i++) {
+      if(this.flows[i][0] < 0){
+        this.flows[i][0] = this.flows[i][0]*scale_factor;
+        this.flows[i][1].velocity = this.flows[i][1].velocity*scale_factor;
+        this.flows[i][1].massFlow = this.flows[i][1].massFlow*scale_factor;
+      }
+    }
+    return true;
+  } else {return false;}
 }
