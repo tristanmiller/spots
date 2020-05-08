@@ -25,7 +25,7 @@ const RECURSION_LIMIT = 0;
 const MULTIPHASE_MIN_LENGTH = 0.15; //snapping length for sub-elements
 
 const ELEMENT_LENGTH = 2; //metres
-let PIPE_ANGLE =  -0.1*Math.PI; //radians
+let PIPE_ANGLE =  0.25*Math.PI; //radians
 const PIPE_DIAMETER = 0.064; //metres
 const RESTRICTION_DIAMETER = 0.064; //metres
 let elm_container = document.getElementsByClassName('elm_container')[0];
@@ -70,7 +70,6 @@ function Fluid (pressure_ref, rho_ref, K, mu, eta, pressure_cav) {
 const water = new Fluid (PR_W, RHO_W, K_W, MU_W, ETA_W, 3e3);
 const air = new Fluid (PR_A, RHO_A, K_A, MU_A, ETA_A);
 
-let sink1 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, 1.0*air.PR, water);
 let pippy = new Pipe(PIPE_DIAMETER, 5*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
 pippy.fill(water);
 let testy = pippy.elements[2];
@@ -84,7 +83,7 @@ testy.update();
 console.log(testy.pressure);
 console.log(pippy);
 
-
+let sink1 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, 1.0*air.PR, water);
 let sink2 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1.0*air.PR, water);
 
 sink1.pos_start.x -= sink1.directionCosine*sink1.elm_length;
@@ -93,7 +92,7 @@ sink1.pos_start.z -= sink1.directionSine*sink1.elm_length;
 sink1.pos_end = sink1.findPosEnd();
 sink1.pos_middle = sink1.findPosMiddle();
 
-connectElements(pippy.startElement, sink1);
+connectElements(sink1, pippy.startElement);
 connectElements(pippy.endElement, sink2);
 
 for (let i = 0, l = g_elements.length; i < l; i++) {

@@ -99,6 +99,11 @@ Interface.prototype.calculateGravForce = function (elm1, elm2) {
   }
 
   let force = -1*avgDS*mass*GRAV_ACCN;
+  if(this.ends[0] == 'start') {
+    force *= -1;
+  }
+  // this will come out wrong if the elements are connected in the 'wrong' order!
+  // flow needs to go away from the uphill element!
   return force;
 
   // alternatively - work out which of the two elements is uphill
