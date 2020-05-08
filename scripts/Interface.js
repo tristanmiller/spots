@@ -130,12 +130,11 @@ Interface.prototype.calculateForce = function (elm1, elm2) {
 };
 
 
-Interface.prototype.calculateMassFlows = function (time_step) {
+Interface.prototype.calculateVelocity = function (time_step) {
   if(!time_step) {time_step = TIME_STEP;}
   //determine forces
   let elm1 = this.elements[0];
   let elm2 = this.elements[1];
-
 
   if(elm1.area > 0 && elm2.area > 0) {
     let force = this.calculateForce(elm1, elm2);
@@ -151,50 +150,24 @@ Interface.prototype.calculateMassFlows = function (time_step) {
     // console.log(fac);
     momentum *= Math.pow((fac), FRIC_CONST*time_step);
     //replace with a factor that depends on pipe parameters, as a fraction of some 'reference pipe' at 'maximum flow speed'
-
-
     this.velocity = momentum/mass;
     if (Math.abs(this.velocity) < VELOCITY_THRESHOLD) {this.velocity = 0;}
     this.velocity = Math.round((1/VELOCITY_THRESHOLD)*this.velocity)/(1/VELOCITY_THRESHOLD);
     if (this.velocity > VELOCITY_LIMIT || this.velocity < -1*VELOCITY_LIMIT) {this.velocity = Math.sign(this.velocity)*VELOCITY_LIMIT;}
-    this.massFlow = this.velocity*time_step*Math.min(elm1.area, elm2.area);
-    //insert check here for excessive flow across interface
-    //if there is excessive flow -
-    //for loop
-    // recurse but with timestep = 0.1*TIME_STEP
-    //
-    let tooMuch = false;
-    if (this.velocity < 0) {
-      this.massFlow *= elm2.rho;
-      if ((elm2.mass + this.massFlow)/elm2.volume < elm2.fluid.RHO_Critical) {tooMuch = true;}
-    }
-    if (this.velocity > 0) {
-      this.massFlow *= elm1.rho;
-      if ((elm1.mass + this.massFlow)/elm1.volume < elm1.fluid.RHO_Critical ) {tooMuch = true;}
-    }
-    // console.log(tooMuch);
-    if (tooMuch) {
-      if (this.depth < RECURSION_LIMIT) {
-        this.depth ++;
-        for (let i = 0; i < SUB_STEPS; i++) {
-          this.calculateMassFlows(time_step/SUB_STEPS);
-          this.resolveMassFlows();
-          elm1.update();
-          elm2.update();
-        }
-        this.depth --;
-      } else {
-        // this.massFlow = this.massFlow/Math.pow(SUB_STEPS, RECURSION_LIMIT + 1);
-        // this.velocity = this.velocity/Math.pow(SUB_STEPS, RECURSION_LIMIT + 1);
-      }
-    }
-    elm1.flows.push([-1*this.massFlow, this]);
-    elm2.flows.push([this.massFlow, this]);
-
   } else {
     this.velocity = 0;
   }
-};
+}
+
+Interface.prototype.calculateMassFlows = function (time_step) {
+  if (!time_step) {time_step = TIME_STEP;}
+  let elm1 = this.elements[0];
+  let elm2 = this.elements[1];
+  
+  this.massFlow = this.velocity*time_step*Math.min(elm1.area, elm2.area);
+  elm1.flows.push([this.massFlow, this]);
+  elm2.flows.push([this.massFlow, this]);
+}
 
 Interface.prototype.resolveMassFlows = function () {
   if(this.massFlow != 0) {
@@ -261,7 +234,7 @@ Interface.prototype.move = function () {
   }
 
 
-  if(elm_shrink.elm_length > MULTIPHASE_MIN_LENGTH) {
+  if(elm_shrink.elm_length >= MULTIPHASE_MIN_LENGTH) {
     //keep adjusting the interphase boundary as normal
   } else {
     //snap the shrunken element out of existence
@@ -270,7 +243,7 @@ Interface.prototype.move = function () {
 
     console.log('shrinky goes bye bye: ');
 
-    this.replaceElementOnNeighbour(elm_shrink, elm_grow);
+    // this.replaceElementOnNeighbour(elm_shrink, elm_grow);
 
     //disable elm_shrink
 
@@ -279,6 +252,7 @@ Interface.prototype.move = function () {
     elm_grow.fill(elm_grow.fluid, elm_grow.pressure);
 
     this.replaceElementOnNeighbour(elm_shrink, elm_grow);
+
     //that's great, but it doesn't add the replacement interface to elm_grow!
     //this shouldn't matter...
     //disconnect this interface between elm_grow and elm_shrink
@@ -322,7 +296,10 @@ Interface.prototype.subdivide = function () {
     let length_disp = vol_disp/elm_split.elm_length;
 
     //length_disp is the length of the new element that will be created
-    length_disp = MULTIPHASE_MIN_LENGTH;
+    length_disp = MULTIPHASE_MIN_LENGTH + 0.001;
+    // length_disp = Math.max(MULTIPHASE_MIN_LENGTH + 0.001, length_disp);
+    // length_disp = Math.min(elm_split.elm_length - MULTIPHASE_MIN_LENGTH + 0.001, length_disp);
+
     // OR always just project into elm_split the MULTIPHASE_MIN_LENGTH?
     elm_split.elm_length -= length_disp;
     let subElement = new Element(elm_split.diameter, length_disp, elm_split.angle, elm_split.pos_start);
@@ -347,12 +324,10 @@ Interface.prototype.subdivide = function () {
     subElement.fill(elm_push.fluid, elm_push.pressure);
     elm_split.fill(elm_split.fluid, elm_split.pressure);
 
-
     //unhook this interface from elm_split and elm_push;
      this.disconnect();
     // no - just replace elm_split on THIS interface with subElement
     //this.replaceElement(this, elm_split, subElement);
-
 
     if(elm_push == elm1) {
       connectElements(elm_push, subElement, false, this.velocity);
@@ -361,12 +336,10 @@ Interface.prototype.subdivide = function () {
       connectElements(subElement, elm_push, false, this.velocity);
       connectElements(elm_split, subElement, true, this.velocity);
     }
-
   } else if (elm_split.type == 'sink') {
     //sort out massflow as normal
     elm1.mass -= this.massFlow;
     elm2.mass += this.massFlow;
-
   }
 }
 

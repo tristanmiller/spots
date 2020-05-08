@@ -6,7 +6,8 @@ function Element(diameter, length, angle, pos_start){
   this.angle = angle;
   this.directionSine = Math.sin(this.angle);
   this.directionCosine = Math.cos(this.angle);
-  this.pos_start = pos_start;
+  this.pos_start = {x:0, z:0};
+  if (pos_start) {this.pos_start = pos_start;}
   this.pos_end = this.findPosEnd();
   this.pos_middle = this.findPosMiddle();
   this.pos_start_0 = pos_start;
@@ -87,12 +88,19 @@ Element.prototype.update = function () {
   this.volume = this.findVolume();
   this.findDensity();
   this.newPressureFromDensity();
+
   this.flows = [];
   this.fresh = false;
   this.velocity = 0;
   if(this.interfaces.length > 0) {
     for (let i = 0, l = this.interfaces.length; i < l; i++) {
-      this.velocity += this.interfaces[i].velocity;
+      let iface = this.interfaces[i];
+      let mid = iface.ends[0];
+      if(mid == 'end'){
+        this.velocity += iface.velocity;
+      } else if(mid == 'start') {
+        this.velocity -= iface.velocity;
+      }
     }
     this.velocity = this.velocity/this.interfaces.length;
   }
@@ -107,10 +115,20 @@ Element.prototype.fill = function (fluid, pressure) {
 
 
 Element.prototype.updateDiv = function () {
-  this.elm_div.style.transform = 'rotateZ(' + this.angle*180/Math.PI + 'deg)';
-  this.elm_div.style.width = 50*this.elm_length + 'px';
   this.elm_div.style.top = 50*this.pos_start.z + 'px';
+  // if (this.pos_start.z > this.pos_end.z) {
+  //   this.elm_div.style.top = 50*this.pos_end.z + 'px';
+  // }
   this.elm_div.style.left = 50*this.pos_start.x + 'px';
+  // if (this.pos_start.x > this.pos_end.x) {
+  //   this.elm_div.style.left = 50*this.pos_end.x + 'px';
+  // }
+  this.elm_div.style.width = 50*this.elm_length + 'px';
+  // this.elm_div.style.transform = ' scaleX(50)';
+  this.elm_div.style.transform = ' rotateZ(' + 1*this.angle*180/Math.PI + 'deg)';
+  // this.elm_div.style.transform += ' translate3d(' + 100*this.pos_start.x + 'px, 0px, '+ 100*this.pos_start.z + 'px)';
+
+
 }
 
 Element.prototype.createDiv = function () {
@@ -150,19 +168,33 @@ Element.prototype.checkMassFlows = function () {
     //find the outflow that will bring the mass to mass_critical
     let max_outflow = mass_critical - this.mass;
     //find a scaling factor i.e. desired/actual outflow
-    let scale_factor = max_outflow/outflow;
+    let scale_factor = 0;
+    if (outflow != 0) {scale_factor = max_outflow/outflow;}
     if(scale_factor < 0) {scale_factor = 0;} else if (scale_factor > 1) {scale_factor = 1;}
     // console.log(scale_factor);
     //scale each of the flows in the outflows list. Also scale the velocities of the corresponding interfaces
     for (let i = 0, l = this.flows.length; i < l; i++) {
       if(this.flows[i][0] < 0){
-        this.flows[i][0] = this.flows[i][0]*scale_factor;
-        this.flows[i][1].velocity = this.flows[i][1].velocity*scale_factor;
-        this.flows[i][1].massFlow = this.flows[i][1].massFlow*scale_factor;
+        this.flows[i][0] = 0;
+        let iface = this.flows[i][1];
+        iface.velocity = iface.velocity*scale_factor;
+        //iface.calculateMassFlows();
+        for (let j = 0, n = iface.elements.length; j < n; j++) {
+          if(iface.elements[j] != this) {
+            for (let k = 0, m = iface.elements[j].flows.length; k < m; k++) {
+              let thisFlow = iface.elements[j].flows[k];
+              if(thisFlow[1] == iface && thisFlow[1] > 0){
+                thisFlow[1] = 0;
+              }
+            }
+            iface.calculateMassFlows();
+            iface.elements[j].checkMassFlows();
+          }
+        }
+
       }
     }
-    return true;
-  } else {return false;}
+  }
 }
 
 Element.prototype.replaceInterface = function (iface_old, iface_new) {

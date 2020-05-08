@@ -13,10 +13,10 @@ const MU_A = 1.48e-5; //m^2/s
 const ETA_A = 1.81e-5; //Pa.s
 
 const TIME_STEP = 0.0001; // seconds
-let INTERVALS = 10000;//Math.round(1/TIME_STEP);
+let INTERVALS = 1;//Math.round(1/TIME_STEP);
 
 const GRAV_ACCN = 9.8; //ms^-2
-const FRIC_CONST = 1; //global friction constant - should be a function of medium and hose material
+const FRIC_CONST = 1.5; //global friction constant - should be a function of medium and hose material
 const VELOCITY_LIMIT = 1000; //ms^-1 //little hack to stop things getting too crazy
 const VELOCITY_THRESHOLD = 1e-8;  //how much precision for velocity?
 
@@ -25,11 +25,11 @@ const RECURSION_LIMIT = 0;
 const MULTIPHASE_MIN_LENGTH = 0.15; //snapping length for sub-elements
 
 const ELEMENT_LENGTH = 2; //metres
-let PIPE_ANGLE =  0.25*Math.PI; //radians
+let PIPE_ANGLE =  0.1*Math.PI; //radians
 const PIPE_DIAMETER = 0.064; //metres
 const RESTRICTION_DIAMETER = 0.064; //metres
 let elm_container = document.getElementsByClassName('elm_container')[0];
-elm_container.style.transform = 'rotateZ(' + -1*PIPE_ANGLE*180/Math.PI + 'deg)';
+//elm_container.style.transform = 'rotateZ(' + -1*PIPE_ANGLE*180/Math.PI + 'deg)';
 
 
 let g_interfaces = [];
@@ -70,22 +70,22 @@ function Fluid (pressure_ref, rho_ref, K, mu, eta, pressure_cav) {
 const water = new Fluid (PR_W, RHO_W, K_W, MU_W, ETA_W, 3e3);
 const air = new Fluid (PR_A, RHO_A, K_A, MU_A, ETA_A);
 
-let pippy = new Pipe(PIPE_DIAMETER, 5*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
+
+
+let pippy = new Pipe(PIPE_DIAMETER, 10*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
 pippy.fill(water);
-let testy = pippy.elements[2];
+let testy = pippy.elements[5];
 testy.diameter = RESTRICTION_DIAMETER;
-testy.fill(water, 1*water.PR);
+testy.fill(air, 1.3*air.PR);
 console.log(testy);
 testy.update();
-// pippy.elements[0].fill(water, 1.00*water.PR);
-// pippy.elements[0].update();
 
 console.log(testy.pressure);
 console.log(pippy);
 
-let sink1 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, 1.0*air.PR, water);
-let sink2 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1.0*air.PR, water);
-
+let sink1 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, 1.0*air.PR, air);
+//let sink2 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1.0*air.PR, air);
+//
 sink1.pos_start.x -= sink1.directionCosine*sink1.elm_length;
 sink1.pos_start.z -= sink1.directionSine*sink1.elm_length;
 
@@ -93,7 +93,7 @@ sink1.pos_end = sink1.findPosEnd();
 sink1.pos_middle = sink1.findPosMiddle();
 
 connectElements(sink1, pippy.startElement);
-connectElements(pippy.endElement, sink2);
+//connectElements(pippy.endElement, sink2);
 
 for (let i = 0, l = g_elements.length; i < l; i++) {
   g_elements[i].createDiv();
@@ -119,14 +119,14 @@ console.log(g_elements);
 console.log(g_interfaces);
 
 function visualise() {
-  console.log(g_elements[1].interfaces.length);
   for (let p = 0, l = INTERVALS; p < l; p++){
     for (let i = 0, l = g_interfaces.length; i < l; i++) {
       let thisInterface = g_interfaces[i];
       if (thisInterface.active && thisInterface.sub) {
         if (!thisInterface.fresh) {
+          thisInterface.calculateVelocity();
           thisInterface.calculateMassFlows();
-          thisInterface.resolveMassFlows();
+          // thisInterface.resolveMassFlows();
         } else {thisInterface.fresh = false;}
       }
     }
@@ -136,7 +136,24 @@ function visualise() {
       let thisInterface = g_interfaces[i];
       if (thisInterface.active && !thisInterface.sub) {
         if (!thisInterface.fresh) {
+          thisInterface.calculateVelocity();
           thisInterface.calculateMassFlows();
+          // thisInterface.resolveMassFlows();
+        } else {thisInterface.fresh = false;}
+      }
+    }
+
+    for (let i = 0, l = g_elements.length; i < l; i++) {
+      let thisElement = g_elements[i];
+      if (thisElement.active) {
+        thisElement.checkMassFlows();
+      }
+    }
+
+    for (let i = 0, l = g_interfaces.length; i < l; i++) {
+      let thisInterface = g_interfaces[i];
+      if (thisInterface.active && thisInterface.sub) {
+        if (!thisInterface.fresh) {
           thisInterface.resolveMassFlows();
         } else {thisInterface.fresh = false;}
       }
@@ -148,14 +165,22 @@ function visualise() {
         thisElement.update();
       }
     }
+
+    for (let i = 0, l = g_interfaces.length; i < l; i++) {
+      let thisInterface = g_interfaces[i];
+      if (thisInterface.active && !thisInterface.sub) {
+        if (!thisInterface.fresh) {
+           thisInterface.resolveMassFlows();
+        } else {thisInterface.fresh = false;}
+      }
+    }
   }
 
   for (let i = 0, l = g_elements.length; i < l; i++) {
 
     let elm = g_elements[i];
     if (elm.active) {
-      elm.updateDiv();
-      let elm_div = elm.elm_div;
+
       let vel = 0;
 
       //this is to facilitate flow and speed reporting - still not quite right
@@ -172,14 +197,15 @@ function visualise() {
         area = 0;
       }
 
-
+      let elm_div = elm.elm_div;
       elm_div_opac(elm, elm_div);
       elm_div.style.height = 100*elm.diameter/0.064 + '%';
       // elm_divs.style.flexGrow = elm.elm_length;
       elm_div.innerHTML =  Math.floor(elm.pressure)/1000 + 'kPa <br>'+ Math.round(10000*vel)/10000 + 'm/s <br>' + Math.round(1000*vel*area*1000)/1000 +'L/s <br>' + elm.elm_length;
+      elm.updateDiv();
     } else {elm.elm_div.style.display = 'none';}
   }
-  requestAnimationFrame (visualise);
+   requestAnimationFrame (visualise);
 }
 
 let viewport = document.getElementsByClassName('viewport')[0];
