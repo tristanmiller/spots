@@ -13,10 +13,10 @@ const MU_A = 1.48e-5; //m^2/s
 const ETA_A = 1.81e-5; //Pa.s
 
 const TIME_STEP = 0.0001; // seconds
-let INTERVALS = 1;//Math.round(1/TIME_STEP);
+let INTERVALS = 10000;//Math.round(1/TIME_STEP);
 
 const GRAV_ACCN = 9.8; //ms^-2
-const FRIC_CONST = 1.5; //global friction constant - should be a function of medium and hose material
+const FRIC_CONST = 1; //global friction constant - should be a function of medium and hose material
 const VELOCITY_LIMIT = 1000; //ms^-1 //little hack to stop things getting too crazy
 const VELOCITY_THRESHOLD = 1e-8;  //how much precision for velocity?
 
@@ -25,7 +25,7 @@ const RECURSION_LIMIT = 0;
 const MULTIPHASE_MIN_LENGTH = 0.15; //snapping length for sub-elements
 
 const ELEMENT_LENGTH = 2; //metres
-let PIPE_ANGLE =  0.1*Math.PI; //radians
+let PIPE_ANGLE =  0.5*Math.PI; //radians
 const PIPE_DIAMETER = 0.064; //metres
 const RESTRICTION_DIAMETER = 0.064; //metres
 let elm_container = document.getElementsByClassName('elm_container')[0];
@@ -126,7 +126,7 @@ function visualise() {
         if (!thisInterface.fresh) {
           thisInterface.calculateVelocity();
           thisInterface.calculateMassFlows();
-          // thisInterface.resolveMassFlows();
+          thisInterface.resolveMassFlows();
         } else {thisInterface.fresh = false;}
       }
     }
@@ -138,7 +138,7 @@ function visualise() {
         if (!thisInterface.fresh) {
           thisInterface.calculateVelocity();
           thisInterface.calculateMassFlows();
-          // thisInterface.resolveMassFlows();
+          thisInterface.resolveMassFlows();
         } else {thisInterface.fresh = false;}
       }
     }
@@ -152,7 +152,7 @@ function visualise() {
 
     for (let i = 0, l = g_interfaces.length; i < l; i++) {
       let thisInterface = g_interfaces[i];
-      if (thisInterface.active && thisInterface.sub) {
+      if (thisInterface.active) {
         if (!thisInterface.fresh) {
           thisInterface.resolveMassFlows();
         } else {thisInterface.fresh = false;}

@@ -36,11 +36,11 @@ Pipe.prototype.fill = function (fluid, pressure) {
 }
 
 Pipe.prototype.checkMassFlows = function() {
-  for (let i = 0, l = this.elements.length; i < l; i++) {
-    if(this.elements[i].checkMassFlows()) {
-      this.checkMassFlows();
-    }
-  }
+  // for (let i = 0, l = this.elements.length; i < l; i++) {
+  //   if(this.elements[i].checkMassFlows()) {
+  //     this.checkMassFlows();
+  //   }
+  // }
 }
 
 Pipe.prototype.update = function() {
@@ -48,7 +48,7 @@ Pipe.prototype.update = function() {
     this.interfaces[i].calculateMassFlows();
   }
 
-  this.checkMassFlows();
+  // this.checkMassFlows();
 
   for (let i = 0, l = this.interfaces.length; i < l; i++) {
     this.interfaces[i].resolveMassFlows();
