@@ -17,12 +17,9 @@ function Interface (elements, sub, vel) {
   this.fresh = true;
   this.active = true;
   this.determineEnds();
-  if(sub) {
-    //TODO: replace this with 'reallocation'
-    g_subInterfaces.push(this);
-  } else {
+
   g_interfaces.push(this);
-  }
+
   //console.log(g_interfaces.length);
 }
 
@@ -267,36 +264,20 @@ Interface.prototype.move = function () {
     //find the relevant interfaces and stitch them into the victorious element
 
     console.log('shrinky goes bye bye: ');
-    // get the interface on elm_shrink that isn't THIS interface
-    // get the element on intA that isn't elm_shrink
-    // let shrink_interfaces = elm_shrink.interfaces;
-    // let intA = shrink_interfaces[0];
-    //
-    // for (let i = 0, l = shrink_interfaces.length; i < l; i++) {
-    //   let iface = shrink_interfaces[i];
-    //   if (iface != this) {
-    //     intA = iface;
-    //     break;
-    //   }
-    // }
-    //
-    // let elm = intA.elements[0];
-    //
-    // for (let i = 0, l = intA.elements.length; i < l; i++) {
-    //   if(intA.elements[i] != elm_shrink) {
-    //       elm = intA.elements[i];
-    //       break;
-    //   }
-    // }
+
     this.replaceElementOnNeighbour(elm_shrink, elm_grow);
-    //disconnect this interface between elm_grow and elm_shrink
+
     //disable elm_shrink
-    this.disconnect();
+
     elm_shrink.active = false;
     elm_grow.volume = elm_grow.findVolume();
     elm_grow.fill(elm_grow.fluid, elm_grow.pressure);
 
     this.replaceElementOnNeighbour(elm_shrink, elm_grow);
+    //that's great, but it doesn't add the replacement interface to elm_grow!
+    //this shouldn't matter...
+    //disconnect this interface between elm_grow and elm_shrink
+    this.disconnect();
   }
 
   if(adjust == 'start') {
@@ -377,15 +358,10 @@ Interface.prototype.subdivide = function () {
     }
 
   } else if (elm_split.type == 'sink') {
-    //the direction of connection seems to be crucially important somehow.
-    //need to figure this out!
-    if (elm_split == elm1) {
-      elm1.mass -= this.massFlow;
-      elm2.mass += this.massFlow;
-    } else if (elm_split == elm2) {
-      elm1.mass -= this.massFlow;
-      elm2.mass += this.massFlow;
-    }
+    //sort out massflow as normal
+    elm1.mass -= this.massFlow;
+    elm2.mass += this.massFlow;
+
   }
 }
 
@@ -413,7 +389,7 @@ Interface.prototype.weld = function () {
 
   elmNew.mass = newMass;
   elmNew.findDensity();
-  elmNew.newPressureFromDensity(elmNew.fluid.PR, elmNew.fluid.RHO, elmNew.fluid.K);
+  elmNew.newPressureFromDensity();
 
   //create div representation
   elmNew.createDiv();
@@ -441,10 +417,11 @@ Interface.prototype.weld = function () {
 
 
 Interface.prototype.replaceElement = function (iface, elm_old, elm_new) {
-      //go through elements. If element = thisElm, replace it with elmNew
+      //go through elements. If element = elm_old, replace it with elm_new
   for (let i = 0, l = iface.elements.length; i < l; i++) {
     if (iface.elements[i] == elm_old) {
       iface.elements[i] = elm_new;
+      elm_new.replaceInterface(this, iface);
       iface.determineEnds();
       //iface.fresh = true;
       break;
@@ -457,7 +434,7 @@ Interface.prototype.replaceElementOnNeighbour = function (elm_old, elm_new) {
   for (let i = 0, l = elm_old.interfaces.length; i < l; i++) {
     let iface = elm_old.interfaces[i];
     if(iface != this) {
-      //go through elements. If element = thisElm, replace it with elmNew
+      //go through elements. If element = elm_old, replace it with elm_new
       this.replaceElement(iface, elm_old, elm_new);
       break;
     }

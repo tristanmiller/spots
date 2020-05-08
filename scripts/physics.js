@@ -25,7 +25,7 @@ const RECURSION_LIMIT = 0;
 const MULTIPHASE_MIN_LENGTH = 0.15; //snapping length for sub-elements
 
 const ELEMENT_LENGTH = 2; //metres
-let PIPE_ANGLE =  0*Math.PI; //radians
+let PIPE_ANGLE =  -0.1*Math.PI; //radians
 const PIPE_DIAMETER = 0.064; //metres
 const RESTRICTION_DIAMETER = 0.064; //metres
 let elm_container = document.getElementsByClassName('elm_container')[0];
@@ -34,7 +34,7 @@ elm_container.style.transform = 'rotateZ(' + -1*PIPE_ANGLE*180/Math.PI + 'deg)';
 
 let g_interfaces = [];
 let g_elements = [];
-let g_subInterfaces = [];
+// let g_subInterfaces = [];
 let g_subElements = [];
 function calculateDistance(pos1, pos2) {
   return Math.pow(pos1.x - pos2.x, 2) + Math.pow(pos1.z - pos2.z, 2);
@@ -75,7 +75,7 @@ let pippy = new Pipe(PIPE_DIAMETER, 5*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
 pippy.fill(water);
 let testy = pippy.elements[2];
 testy.diameter = RESTRICTION_DIAMETER;
-testy.fill(air, 1.3*water.PR);
+testy.fill(water, 1*water.PR);
 console.log(testy);
 testy.update();
 // pippy.elements[0].fill(water, 1.00*water.PR);
@@ -120,10 +120,11 @@ console.log(g_elements);
 console.log(g_interfaces);
 
 function visualise() {
+  console.log(g_elements[1].interfaces.length);
   for (let p = 0, l = INTERVALS; p < l; p++){
-    for (let i = 0, l = g_subInterfaces.length; i < l; i++) {
-      let thisInterface = g_subInterfaces[i];
-      if (thisInterface.active) {
+    for (let i = 0, l = g_interfaces.length; i < l; i++) {
+      let thisInterface = g_interfaces[i];
+      if (thisInterface.active && thisInterface.sub) {
         if (!thisInterface.fresh) {
           thisInterface.calculateMassFlows();
           thisInterface.resolveMassFlows();
@@ -134,7 +135,7 @@ function visualise() {
 
     for (let i = 0, l = g_interfaces.length; i < l; i++) {
       let thisInterface = g_interfaces[i];
-      if (thisInterface.active) {
+      if (thisInterface.active && !thisInterface.sub) {
         if (!thisInterface.fresh) {
           thisInterface.calculateMassFlows();
           thisInterface.resolveMassFlows();

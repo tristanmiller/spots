@@ -56,15 +56,15 @@ Element.prototype.findPosStart = function () {
   return pos_start;
 };
 
-Element.prototype.newDensityFromPressure = function (pr_ref, rho_ref, K) {
+Element.prototype.newDensityFromPressure = function () {
   // let rho_new = rho_ref/(1 - (pr - pr_ref)/K);
-  let rho_new = rho_ref*(1 + (this.pressure - pr_ref)/K);
+  let rho_new = this.fluid.RHO*(1 + (this.pressure - this.fluid.PR)/this.fluid.K);
   this.rho = rho_new;
 }
 
-Element.prototype.newPressureFromDensity = function (pr_ref, rho_ref, K) {
+Element.prototype.newPressureFromDensity = function () {
   // let pr_new = K*Math.log(rho/rho_ref);
-  let pr_new = pr_ref + K*(this.rho - rho_ref)/rho_ref;
+  let pr_new = this.fluid.PR + this.fluid.K*(this.rho - this.fluid.RHO)/this.fluid.RHO;
   this.pressure = pr_new;
 }
 
@@ -86,7 +86,7 @@ Element.prototype.update = function () {
   this.area = this.findArea()
   this.volume = this.findVolume();
   this.findDensity();
-  this.newPressureFromDensity(this.fluid.PR, this.fluid.RHO, this.fluid.K);
+  this.newPressureFromDensity();
   this.flows = [];
   this.fresh = false;
   this.velocity = 0;
@@ -163,4 +163,14 @@ Element.prototype.checkMassFlows = function () {
     }
     return true;
   } else {return false;}
+}
+
+Element.prototype.replaceInterface = function (iface_old, iface_new) {
+      //go through interfaces. If interface = iface_old, replace it with iface_new
+  for (let i = 0, l = this.interfaces.length; i < l; i++) {
+    if (this.interfaces[i] == iface_old) {
+      this.interfaces[i] = iface_new;
+      break;
+    }
+  }
 }
