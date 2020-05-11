@@ -13,7 +13,7 @@ const MU_A = 1.48e-5; //m^2/s
 const ETA_A = 1.81e-5; //Pa.s
 
 const TIME_STEP = 0.0001; // seconds
-let INTERVALS = 10000;//Math.round(1/TIME_STEP);
+let INTERVALS = 100;//Math.round(1/TIME_STEP);
 
 const GRAV_ACCN = 9.8; //ms^-2
 const FRIC_CONST = 1; //global friction constant - should be a function of medium and hose material
@@ -25,11 +25,12 @@ const RECURSION_LIMIT = 0;
 const MULTIPHASE_MIN_LENGTH = 0.15; //snapping length for sub-elements
 
 const ELEMENT_LENGTH = 2; //metres
-let PIPE_ANGLE =  0.5*Math.PI; //radians
+let PIPE_ANGLE =  0.1*Math.PI; //radians
 const PIPE_DIAMETER = 0.064; //metres
 const RESTRICTION_DIAMETER = 0.064; //metres
+
 let elm_container = document.getElementsByClassName('elm_container')[0];
-//elm_container.style.transform = 'rotateZ(' + -1*PIPE_ANGLE*180/Math.PI + 'deg)';
+elm_container.style.transform = 'rotateZ(' + -1*PIPE_ANGLE*180/Math.PI + 'deg)';
 
 
 let g_interfaces = [];
@@ -76,7 +77,7 @@ let pippy = new Pipe(PIPE_DIAMETER, 10*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
 pippy.fill(water);
 let testy = pippy.elements[5];
 testy.diameter = RESTRICTION_DIAMETER;
-testy.fill(air, 1.3*air.PR);
+testy.fill(air, 1.0*air.PR);
 console.log(testy);
 testy.update();
 
@@ -84,7 +85,7 @@ console.log(testy.pressure);
 console.log(pippy);
 
 let sink1 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, 1.0*air.PR, air);
-//let sink2 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1.0*air.PR, air);
+let sink2 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1.0*air.PR, air);
 //
 sink1.pos_start.x -= sink1.directionCosine*sink1.elm_length;
 sink1.pos_start.z -= sink1.directionSine*sink1.elm_length;
@@ -93,7 +94,7 @@ sink1.pos_end = sink1.findPosEnd();
 sink1.pos_middle = sink1.findPosMiddle();
 
 connectElements(sink1, pippy.startElement);
-//connectElements(pippy.endElement, sink2);
+connectElements(pippy.endElement, sink2);
 
 for (let i = 0, l = g_elements.length; i < l; i++) {
   g_elements[i].createDiv();
@@ -150,14 +151,14 @@ function visualise() {
       }
     }
 
-    for (let i = 0, l = g_interfaces.length; i < l; i++) {
-      let thisInterface = g_interfaces[i];
-      if (thisInterface.active) {
-        if (!thisInterface.fresh) {
-          thisInterface.resolveMassFlows();
-        } else {thisInterface.fresh = false;}
-      }
-    }
+    // for (let i = 0, l = g_interfaces.length; i < l; i++) {
+    //   let thisInterface = g_interfaces[i];
+    //   if (thisInterface.active && !thisInterface.sub) {
+    //     if (!thisInterface.fresh) {
+    //       thisInterface.resolveMassFlows();
+    //     } else {thisInterface.fresh = false;}
+    //   }
+    // }
 
     for (let i = 0, l = g_elements.length; i < l; i++) {
       let thisElement = g_elements[i];
