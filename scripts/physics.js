@@ -25,9 +25,9 @@ const RECURSION_LIMIT = 0;
 const MULTIPHASE_MIN_LENGTH = 0.15; //snapping length for sub-elements
 
 const ELEMENT_LENGTH = 2; //metres
-let PIPE_ANGLE =  0.1*Math.PI; //radians
+let PIPE_ANGLE =  0.0*Math.PI; //radians
 const PIPE_DIAMETER = 0.064; //metres
-const RESTRICTION_DIAMETER = 0.064; //metres
+const RESTRICTION_DIAMETER = 0.060; //metres
 
 let elm_container = document.getElementsByClassName('elm_container')[0];
 elm_container.style.transform = 'rotateZ(' + -1*PIPE_ANGLE*180/Math.PI + 'deg)';
@@ -77,15 +77,15 @@ let pippy = new Pipe(PIPE_DIAMETER, 10*ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0});
 pippy.fill(water);
 let testy = pippy.elements[5];
 testy.diameter = RESTRICTION_DIAMETER;
-testy.fill(air, 1.0*air.PR);
+// testy.fill(water, 1.0*water.PR);
 console.log(testy);
 testy.update();
 
 console.log(testy.pressure);
 console.log(pippy);
 
-let sink1 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, 1.0*air.PR, air);
-let sink2 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1.0*air.PR, air);
+let sink1 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, {x:0,z:0}, 1.2*water.PR, water);
+let sink2 = new Sink(PIPE_DIAMETER, ELEMENT_LENGTH, PIPE_ANGLE, pippy.pos_end, 1.0*water.PR, water);
 //
 sink1.pos_start.x -= sink1.directionCosine*sink1.elm_length;
 sink1.pos_start.z -= sink1.directionSine*sink1.elm_length;
