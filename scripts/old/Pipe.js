@@ -22,10 +22,11 @@ function Pipe (diameter, pipe_length, angle, pos_start) {
     this.pos_start = pos_start;
     this.pos_end = this.endElement.pos_end;
 
-    for (let i = 0; i < N - 1; i++) {
-      //connect elements
-      connectElements(this.elements[i], this.elements[i + 1]);
-    }
+    // for (let i = 1; i < N; i++) {
+    //   //create interfaces
+    //     let iface = new Interface([this.elements[i - 1], this.elements[i]]);
+    //     this.interfaces.push(iface);
+    // }
 }
 
 Pipe.prototype.fill = function (fluid, pressure) {
@@ -44,14 +45,14 @@ Pipe.prototype.checkMassFlows = function() {
 
 Pipe.prototype.update = function() {
   for (let i = 0, l = this.interfaces.length; i < l; i++) {
-    // this.interfaces[i].calculateMassFlows();
+    this.interfaces[i].calculateMassFlows();
   }
 
   this.checkMassFlows();
 
-  // for (let i = 0, l = this.interfaces.length; i < l; i++) {
-  //   this.interfaces[i].resolveMassFlows();
-  // }
+  for (let i = 0, l = this.interfaces.length; i < l; i++) {
+    this.interfaces[i].resolveMassFlows();
+  }
   for (let i = 0, l = this.elements.length; i < l; i++) {
     this.elements[i].update();
   }

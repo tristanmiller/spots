@@ -6,6 +6,7 @@ function Element(diameter, length, angle, pos_start){
   this.angle = angle;
   this.directionSine = Math.sin(this.angle);
   this.directionCosine = Math.cos(this.angle);
+  this.velocity = 0;
   this.pos_start = pos_start;
   this.pos_end = this.findPosEnd();
   this.pos_middle = this.findPosMiddle();
@@ -16,6 +17,10 @@ function Element(diameter, length, angle, pos_start){
   this.pos_0 = this.pos;
   this.type =  'simple';
   this.interfaces = [];
+  this.neighbours = {
+    up: [],
+    down: [],
+  };
   this.flows = [];
   g_elements.push(this);
 }
@@ -76,6 +81,50 @@ Element.prototype.findDensity = function () {
   }
 }
 
+Element.prototype.calculatePressureForce = function () {
+  if(this.neighbours.down.length > 0) {
+    let F_this = this.pressure*this.area;
+    for (let i = 0, l = this.neighbours.down.length; i < l; i++) {
+      let neighbour = this.neighbours.down[i];
+      let area_min = Math.min(this.area, neighbour.area);
+      F_this -= neighbour.pressure*area_min;
+      let F_down = this.pressure*area_min - neighbour.pressure*neighbour.area;
+      neighbour.velocity += TIME_SUBSTEP*(F_down/neighbour.mass);
+    }
+    this.velocity += TIME_SUBSTEP*(F_this/this.mass);
+  }
+}
+
+Element.prototype.calculateGravForce = function () {
+  let F_this = this.mass*GRAV_ACCN*this.directionSine;
+  this.velocity += TIME_SUBSTEP*(F_this/this.mass);
+}
+
+Element.prototype.calculateFrictionForce = function () {
+  this.velocity = this.velocity*Math.pow(0.9, 1/INTERVALS);
+}
+
+Element.prototype.convertVelocityToFlows = function () {
+  if (this.velocity !== 0) {
+    let dirn = 'down';
+    if (this.velocity < 0) {
+      dirn = 'up';
+    }
+    //idea - advect the velocity as well?
+    let totalFlow = Math.abs(this.rho*this.velocity*this.area*TIME_SUBSTEP);
+    let neighbours = this.neighbours[dirn];
+    let interArea = 0;
+    for(let i = 0, l = neighbours.length; i < l; i++) {
+      interArea += Math.min(neighbours[i].area, this.area);
+    }
+    for(let i = 0, l = neighbours.length; i < l; i++) {
+      let thisFraction = Math.min(this.area, neighbours[i].area)/interArea;
+      this.flows.push([-1*thisFraction*totalFlow, neighbours[i]]);
+      // console.log(this.flows);
+    }
+  }
+}
+
 //the following is used to update the density, then the pressure of an element
 //when the mass and/or volume has changed
 Element.prototype.update = function () {
@@ -83,7 +132,8 @@ Element.prototype.update = function () {
   this.volume = this.findVolume();
   this.findDensity();
   this.newPressureFromDensity(this.fluid.PR, this.fluid.RHO, this.fluid.K);
-  this.flows = [];
+  this.findMass();
+  // this.flows = [];
 }
 
 Element.prototype.fill = function (fluid, pressure) {
@@ -95,42 +145,54 @@ Element.prototype.fill = function (fluid, pressure) {
 
 Element.prototype.checkMassFlows = function () {
 
-  //go through list of flows
-  //work out if there is a net loss of mass
-  //if so, work out whether it results in 'too low' density
-  //if so, scale the -ve flows appropriately
-  //scale the velocities on the corresponding interfaces appropriately
+  // if there is too little density remaining in the element due to mass outflows, scale the outbound mass flow
 
-    let net_massFlow = 0;
-    let inflows = [];
-    let outflows = [];
-    let outflow = 0;
-    for (let i = 0, l = this.flows.length; i < l; i++) {
-      let flow = this.flows[i];
-      net_massFlow += flow[0];
-      if (flow[0] < 0) {
-        outflows.push(this.flows[i]);
-        outflow += flow[0];}
-      else {inflows.push(flow);}
-    }
+}
 
-    let mass_critical = this.volume*this.fluid.RHO_Critical;
+Element.prototype.diffuse = function () {
+  // diffuse element density into neighbours. Make the diffusion disproportionately aggressive for density gradients above a certain
+  // threshold
 
-    if(this.mass + net_massFlow < mass_critical) {
-      //find the outflow that will bring the mass to mass_critical
-      let max_outflow = mass_critical - this.mass;
-      //find a scaling factor i.e. desired/actual outflow
-      let scale_factor = max_outflow/outflow;
-      if(scale_factor < 0) {scale_factor = 0;} else if (scale_factor > 1) {scale_factor = 1;}
-      // console.log(scale_factor);
-      //scale each of the flows in the outflows list. Also scale the velocities of the corresponding interfaces
-      for (let i = 0, l = this.flows.length; i < l; i++) {
-        if(this.flows[i][0] < 0){
-          this.flows[i][0] = this.flows[i][0]*scale_factor;
-          this.flows[i][1].velocity = this.flows[i][1].velocity*scale_factor;
-          this.flows[i][1].massFlow = this.flows[i][1].massFlow*scale_factor;
-        }
-      }
-      return true;
-    } else {return false;}
+
+  //diffusion total amount should depend on the interfaced area of the element, the diffusion constant (i.e. what percentage
+  // of this quantity should be diffused in each time step), any modifiers for being above a certain density
+
+  //store in flows for each element, then apply those flows.
+  //do one-sided (outwards) for each element
+
+  let interArea = 0;
+  for (let i = 0, l = this.neighbours.up.length; i < l; i++) {
+    let neighbour = this.neighbours.up[i];
+    interArea += neighbour.area;
+  }
+  for (let i = 0, l = this.neighbours.down.length; i < l; i++) {
+    let neighbour = this.neighbours.down[i];
+    interArea += Math.min(neighbour.area, this.area);
+  }
+
+  //consider making an 'all neighbours' list from the two, for ease of dealins and to lose repetition
+  //this should also be based on density or pressure, rather than mass.
+  for (let i = 0, l = this.neighbours.up.length; i < l; i++) {
+    let neighbour = this.neighbours.up[i];
+    let thisFlow = this.mass*DIFFUSION_CONSTANT*TIME_SUBSTEP;
+    this.flows.push([-1*thisFlow, neighbour]);
+  }
+  for (let i = 0, l = this.neighbours.down.length; i < l; i++) {
+    let neighbour = this.neighbours.down[i];
+    let thisFlow = this.mass*DIFFUSION_CONSTANT*TIME_SUBSTEP;
+    this.flows.push([-1*thisFlow, neighbour]);
+  }
+}
+
+
+
+
+Element.prototype.applyFlows = function () {
+  for (let i = 0, l = this.flows.length; i < l; i++) {
+    this.mass += this.flows[i][0];
+    this.flows[i][1].mass -= this.flows[i][0];
+  }
+
+  this.flows = [];
+
 }

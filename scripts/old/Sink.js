@@ -10,5 +10,5 @@ Sink.prototype = Object.create(Element.prototype);
 
 Sink.prototype.update = function () {
   this.fill(this.fluid, this.default_pressure);
-  // this.flows = [];
+  this.flows = [];
 }
