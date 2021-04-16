@@ -63,40 +63,96 @@
 
 let gje = (M) => {
   //implement some checks here. Matrix should be n + 1 columns with n rows, for instance. For now, assume well-formed input M
-  for (let col = 0, l = M.length; col < 1; col++) {
+  for (let col = 0, l = M[0].length - 1; col < l; col++) {
     console.log(`now working on col ${col}`);
-    for (let row = col, m = M[col].length; row < m; row++) {
+    //reorder rows, in descending order of value in the current column
+    for (let row = col, m = M.length; row < m; row++) {
       console.log(`now working on row ${row}`);
-      if (M[col][row] == 0) {
+      if (M[row][col] == 0) {
         //do nothing. go to next row
+        console.log('zero here, going to next row');
       } else {
         //check to see if this row can be promoted
         //if there are any rows above...
-        let temp_row = row;
-        while (M[col][temp_row - 1] && temp_row - 1 >= col) {
-          console.log(`temp_row is ${temp_row}`);
-          if (M[col][temp_row - 1] == 0 || M[col][temp_row - 1] < M[col][temp_row]) {
-            //promote row - swap with the row above.
-            [M[col][temp_row - 1], M[col][temp_row]] = [M[col][temp_row], M[col][temp_row - 1]]
-            //decrement temp_row
-            temp_row--;
-          } else {
-            //do nothing - row can't be promoted any higher.
-            break;
+        if (M[row - 1]) {
+          let temp_row = row;
+          console.log(`temp_row initialised at ${temp_row}`);
+          while (M[temp_row - 1] && temp_row - 1 >= col) {
+            console.log(`temp_row is ${temp_row}`);
+            if (M[temp_row - 1][col] == 0 || M[temp_row - 1][col] < M[temp_row][col]) {
+              //promote row - swap with the row above.
+              console.log('promoting');
+              [M[temp_row - 1], M[temp_row]] = [M[temp_row], M[temp_row - 1]];
+              //decrement temp_row
+              temp_row--;
+            } else {
+              //do nothing - row can't be promoted any higher.
+              console.log('can not promote');
+              break;
+            }
           }
         }
-
       }
+    }
+
+    //once rows are reordered, divide each element in the colth row by the value in the current col.
+    let divisor = M[col][col];
+    if (divisor != 0) {
+      for (let i = col;  i < l + 1; i++) {
+        if (M[col][i] != 0) {
+          M[col][i] = M[col][i]/divisor;
+        }
+      }
+
+      //next, for each row that has a non-zero value in this column, subtract from each element the relevant multiple of the corresponding element of the colth row
+      for (let row = 0, m = M.length; row < m; row++) {
+        if (row != col && M[row][col] != 0) {
+          let factor = M[row][col];
+          for (let i = col;  i < l + 1; i++) {
+            M[row][i] -= factor*M[col][i];
+          }
+        }
+      }
+    } else {
+      console.log(`Somehow we are dividing by zero. Something has gone wrong`);
     }
   }
   console.log(M);
 }
 
 let test_matrix = [
-  [1, 5, -2 , 4],
-  [0, 3, 7, 8],
-  [3, 0, 0, -1],
-  [2, 1, -1, 6]
+  [1, -1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0,   0],
+  [0, 0, -1, 0, -1, 0, 0, 1, 0, 0, 0, 0,   0],
+  [0, 0, 0, -1, 0, -1, 1, -1, 0, 0, 0, 0,   0],
+  [0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0,   0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,   0],
+  [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,   0],
+  [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,   0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0,   0.75],
+  [0, 0, 0, 0, 0, 0, 0, 0, 1, -1, 0, 0,   0.75],
+  [0, 0, -4700, 0, -4700, 0, 0, 0, -1, 0, 0, 1,   0],
+  [0, 0, 0, -4700, 0, -4700, 0, 0, 0, -1, 0, 1,   0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1,   5],
+]
+
+let test_matrix_3 = [
+  [1, -1, 0, 0, 0, 0, 0],
+  [0, 1, -1, 0, 0, 0, 0],
+  [0, 0, 0, 1, 0, 0, 0],
+  [0, 0, 0, -1, 1, 0, 1],
+  [3, 0, 0, 0, -1, 1, 0],
+  [0, 5, 0, 1, 0, -1, 0],
+]
+
+let test_matrix_2 = [
+  [1, 0, -1, 0, 0, 0, 0, 0, 0],
+  [0, 1, 0, -1, 0, 0, 0, 0, 0],
+  [0, 0, 1, 1, -1, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 1, 0, 0, 0],
+  [1, 0, 0, 0, 0, 0, -1, 1, 0],
+  [0, 2, 0, 0, 0, 0, -1, 1, 0],
+  [0, 0, 4, 4, 0, 1, 0, -1, 0],
+  [0, 0, 0, 0, 0, 0, 1, 0, 14]
 ];
 console.log(test_matrix);
 gje(test_matrix);
