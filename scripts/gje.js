@@ -56,3 +56,47 @@
 //subtract element3*row3
 
 //Then read off values. unk 1 = row 1, element 4, unk 2 = row 2, element 4 etc.
+
+
+
+//This function takes the matrix to be 'solved' as an argument, and outputs a list of solutions (or fails gracefully and reports the error)
+
+let gje = (M) => {
+  //implement some checks here. Matrix should be n + 1 columns with n rows, for instance. For now, assume well-formed input M
+  for (let col = 0, l = M.length; col < 1; col++) {
+    console.log(`now working on col ${col}`);
+    for (let row = col, m = M[col].length; row < m; row++) {
+      console.log(`now working on row ${row}`);
+      if (M[col][row] == 0) {
+        //do nothing. go to next row
+      } else {
+        //check to see if this row can be promoted
+        //if there are any rows above...
+        let temp_row = row;
+        while (M[col][temp_row - 1] && temp_row - 1 >= col) {
+          console.log(`temp_row is ${temp_row}`);
+          if (M[col][temp_row - 1] == 0 || M[col][temp_row - 1] < M[col][temp_row]) {
+            //promote row - swap with the row above.
+            [M[col][temp_row - 1], M[col][temp_row]] = [M[col][temp_row], M[col][temp_row - 1]]
+            //decrement temp_row
+            temp_row--;
+          } else {
+            //do nothing - row can't be promoted any higher.
+            break;
+          }
+        }
+
+      }
+    }
+  }
+  console.log(M);
+}
+
+let test_matrix = [
+  [1, 5, -2 , 4],
+  [0, 3, 7, 8],
+  [3, 0, 0, -1],
+  [2, 1, -1, 6]
+];
+console.log(test_matrix);
+gje(test_matrix);
