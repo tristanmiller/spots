@@ -137,32 +137,24 @@ let sager_matrix = [
 
 let f = 5;
 let d = 0.3;
-let revs = 3500;
+let revs = 2000;
 let rho = 997;
+let g = 9.81;
 let A = Math.PI*0.064*0.064;
 let Q_prev = 0;
-let dP = Math.pow(d*revs,2) - 0.5*rho*Math.pow(Q_prev/A,2);
+let dP = 0.00014*g*rho*Math.pow(d*revs,2) - 0.5*rho*Math.pow(Q_prev/A,2);
 
 console.log(dP);
 
-let test_matrix_2 = [
+let test_matrix = [
   [1, -1, 0, 0, 0, 0, 0],
   [0, 1, -1, 0, 0, 0, 0],
   [0, 0, 0, 1, 0, 0, 0],
-  [0, 0, 0, -1, 1, 0, 10 - 2*f],
-  [3, 0, 0, 0, -1, 1, f],
-  [0, 5, 0, 1, 0, -1, -3*f],
+  [0, 0, 5000, -1, 1, 0, dP],
+  [3000, 0, 0, 0, -1, 1, 0],
+  [0, 5000, 0, 1, 0, -1, 0],
 ]
 
-let test_matrix = [
-  [1, -1, 0, 0, 0, 0, 0, 0,   0],
-  [0, 1, -1, 0, 0, 0, 0, 0,   0],
-  [0, 0, 1, -1, 0, 0, 0, 0,   0],
-  [0, 0, 0, 0, 0, 1, 0, 0,   0],
-  [1, 0, 0, 0, 0, 0, 1, -1,   0],
-  [0, 0, 1, 0, 0, 1, 0, -1,   0],
-  [0, 0, 0, 0, 0, 0, -1, 1,   dP],
-  [0,0,0,0,0,1,0,0, 0]
-];
+
 console.log(test_matrix);
 gje(test_matrix);
