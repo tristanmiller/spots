@@ -55,28 +55,25 @@ let gje = (M) => {
         }
       }
     } else {
-      console.log(`Somehow we are dividing by zero. Something has gone wrong`);
+      // console.log(`Somehow we are dividing by zero. Something has gone wrong`);
     }
   }
-  console.log(M);
+  // console.log(M);
 }
 
-let sager_matrix = [
-  [1, -1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0,   0],
-  [0, 0, -1, 0, -1, 0, 0, 1, 0, 0, 0, 0,   0],
-  [0, 0, 0, -1, 0, -1, 1, -1, 0, 0, 0, 0,   0],
-  [0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0,   0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,   0],
-  [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,   0],
-  [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,   0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0,   0.75],
-  [0, 0, 0, 0, 0, 0, 0, 0, 1, -1, 0, 0,   0.75],
-  [0, 0, -4700, 0, -4700, 0, 0, 0, -1, 0, 0, 1,   0],
-  [0, 0, 0, -4700, 0, -4700, 0, 0, 0, -1, 0, 1,   0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1,   5],
-]
+// this function takes one matrix as an argument and returns a clone
+let clone_matrix = (M) => {
+  let M_clone = [];
+  // now go to each row of M, create a deep copy of the row and push it to M_clone
+  for (let i = 0, l = M.length; i < l; i++) {
+    let row = M[i];
+    let row_clone = [...row];
+    M_clone.push(row_clone);
+  }
+  return(M_clone);
+}
 
-let f = 5;
+
 let d = 0.3;
 let revs = 0;
 let rho = 997;
@@ -87,14 +84,7 @@ let dP = 0.00014*g*rho*Math.pow(d*revs,2) - 0.5*rho*Math.pow((1/60000)*Q_prev/A,
 
 console.log(dP);
 
-let test_matrix = [
-  [1, -1, 0, 0, 0, 0, 0],
-  [0, 1, -1, 0, 0, 0, 0],
-  [0, 0, 0, 1, 0, 0, 100000],
-  [0, 0, 0, -1, 1, 0, 400000],
-  [300, 0, 0, 0, -1, 1, dP],
-  [0, 500, 0, 1, 0, -1, 0],
-];
+
 
 let test_matrix_p = [
   [1, -1, 0, 0, 0, 0, 0, 0,   0],
@@ -102,15 +92,51 @@ let test_matrix_p = [
   [0, 0, 1, -1, 0, 0, 0, 0,   0],
   [0, 0, 0, 0, 1, 0, 0, 0,   100000],
   [0, 0, 0, 0, -1, 1, 0, 0,   400000],
-  [100, 0, 0, 0, 0, -1, 1, 0,   0],
+  [300, 0, 0, 0, 0, -1, 1, 0,   0],
   [0, 300, 0, 0, 0, 0, -1, 1,   dP],
   [0, 0, 500, 0, 1, 0, 0, -1,   0]
+];
+
+
+let RPM_slider = document.getElementById('RPM');
+let RPM_output = document.getElementById('RPM_value');
+let P_in_display = document.getElementById('P_inlet');
+let P_out_display = document.getElementById('P_outlet');
+let flow_display = document.getElementById('flowrate');
+
+RPM_output.innerHTML = RPM_slider.value;
+revs = RPM_slider.value;
+
+RPM_slider.oninput = function() {
+  RPM_output.innerHTML = this.value;
+  revs = this.value;
+}
 
 
 
 
-]
+
+let update = () => {
+  let M_solved = clone_matrix(test_matrix_p);
+  gje(M_solved);
+
+  Q_prev = M_solved[0][M_solved[0].length - 1];
+  dP = 0.00014*g*rho*Math.pow(d*revs,2) - 0.5*rho*Math.pow((1/60000)*Q_prev/A,2);
+  test_matrix_p[6][8] = dP;
+
+  let P_in = M_solved[6][8];
+  let P_out = M_solved[7][8];
+  P_in_display.innerHTML = `${Math.round(P_in/1000)} kPa`;
+  if(P_in < 100000) {
+    P_in_display.style.color = `red`;
+  } else {
+    P_in_display.style.color = `black`;
+  }
+  P_out_display.innerHTML = `${Math.round(P_out/1000)} kPa`;
+  flow_display.innerHTML = Math.round(Q_prev);
+
+  requestAnimationFrame(update);
+}
 
 
-console.log(test_matrix_p);
-gje(test_matrix_p);
+update();
