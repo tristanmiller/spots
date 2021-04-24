@@ -78,7 +78,7 @@ let d = 0.3;
 let revs = 0;
 let rho = 997;
 let g = 9.81;
-let A = Math.PI*0.064*0.064;
+let A = Math.PI*0.1*0.1;
 let Q_prev = 0;
 let dP = 0.00014*g*rho*Math.pow(d*revs,2) - 0.5*rho*Math.pow((1/60000)*Q_prev/A,2);
 
