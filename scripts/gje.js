@@ -92,9 +92,12 @@ let test_matrix_p = [
   [0, 0, 1, -1, 0, 0, 0, 0,   0],
   [0, 0, 0, 0, 1, 0, 0, 0,   100000],
   [0, 0, 0, 0, -1, 1, 0, 0,   400000],
-  [300, 0, 0, 0, 0, -1, 1, 0,   0],
+  [300, 0, 0, 0, 0, -1, 1, 0,   0 - Q_prev*300],
+  // [1, 0, 0, 0, 0, 0, 0, 0,   0],
   [0, 300, 0, 0, 0, 0, -1, 1,   dP],
-  [0, 0, 500, 0, 1, 0, 0, -1,   0]
+  [0, 0, 500, 0, 1, 0, 0, -1,   0 - Q_prev*500]
+  // [0, 0, 1, 0, 0, 0, 0, 0,   0]
+
 ];
 
 
@@ -123,6 +126,8 @@ let update = () => {
   Q_prev = M_solved[0][M_solved[0].length - 1];
   dP = 0.00014*g*rho*Math.pow(d*revs,2) - 0.5*rho*Math.pow((1/60000)*Q_prev/A,2);
   test_matrix_p[6][8] = dP;
+  test_matrix_p[5][8] = -Q_prev*test_matrix_p[5][0];
+  test_matrix_p[7][8] = -Q_prev*test_matrix_p[7][2];
 
   let P_in = M_solved[6][8];
   let P_out = M_solved[7][8];
