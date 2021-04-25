@@ -96,6 +96,8 @@ let rho = 997;
 let g = 9.81;
 let A = Math.PI*0.064*0.064;
 let Q_prev = 0;
+let Q_prev_prev = 0;
+let dt = 1/60;
 let dP = 0.00014*g*rho*Math.pow(d*revs,2) - 0.5*rho*Math.pow((1/60000)*Q_prev/A,2);
 
 console.log(dP);
@@ -108,10 +110,10 @@ let test_matrix_p = [
   [0, 0, 1, -1, 0, 0, 0, 0,   0],
   [0, 0, 0, 0, 1, 0, 0, 0,   100000],
   [0, 0, 0, 0, -1, 1, 0, 0,   400000],
-  [300, 0, 0, 0, 0, -1, 1, 0,   0 - Q_prev*300],
+  [300, 0, 0, 0, 0, -1, 1, 0,   0],
   // [1, 0, 0, 0, 0, 0, 0, 0,   0],
   [0, 300, 0, 0, 0, 0, -1, 1,   dP],
-  [0, 0, 500, 0, 1, 0, 0, -1,   0 - Q_prev*500]
+  [0, 0, 500, 0, 1, 0, 0, -1,   0]
   // [0, 0, 1, 0, 0, 0, 0, 0,   0]
 
 ];
@@ -138,12 +140,12 @@ RPM_slider.oninput = function() {
 let update = () => {
   let M_solved = clone_matrix(test_matrix_p);
   gje(M_solved);
-
+  Q_prev_prev = Q_prev;
   Q_prev = M_solved[0][M_solved[0].length - 1];
   dP = 0.00014*g*rho*Math.pow(d*revs,2) - 0.5*rho*Math.pow((1/60000)*Q_prev/A,2);
   test_matrix_p[6][8] = dP;
-  test_matrix_p[5][8] = -Q_prev*test_matrix_p[5][0];
-  test_matrix_p[7][8] = -Q_prev*test_matrix_p[7][2];
+  test_matrix_p[5][8] = -12000*(Q_prev - Q_prev_prev)*dt;
+  test_matrix_p[7][8] = -12000*(Q_prev - Q_prev_prev)*dt;
 
   let P_in = M_solved[6][8];
   let P_out = M_solved[7][8];
