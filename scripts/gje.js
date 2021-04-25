@@ -74,11 +74,27 @@ let clone_matrix = (M) => {
 }
 
 
-let d = 0.3;
+let pipe1 = {
+  type: 'pipe',
+  terminals: ['in','out'],
+  length: 3,
+  diameter: 0.064,
+}
+
+/*
+Need to be able to link the terminals on the component with the characteristic eqn.
+For the pipe it's P_in - P_out = RQ_in, with positive Q indicating a flow toward lower pressure.
+Rearrange for RQ_in + P_out - P_in = 0
+
+links between terminals will be specified so we can get link pressures and currents
+ */
+
+
+let d = 0.25;
 let revs = 0;
 let rho = 997;
 let g = 9.81;
-let A = Math.PI*0.1*0.1;
+let A = Math.PI*0.064*0.064;
 let Q_prev = 0;
 let dP = 0.00014*g*rho*Math.pow(d*revs,2) - 0.5*rho*Math.pow((1/60000)*Q_prev/A,2);
 
