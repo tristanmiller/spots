@@ -82,12 +82,20 @@ let pipe1 = {
 }
 
 /*
-Need to be able to link the terminals on the component with the characteristic eqn.
-For the pipe it's P_in - P_out = RQ_in, with positive Q indicating a flow toward lower pressure.
-Rearrange for RQ_in + P_out - P_in = 0
+instantiate a device
+it has terminals named according to that device
 
-links between terminals will be specified so we can get link pressures and currents
- */
+add device to Network
+terminals are added to the Network's 'terminals' register
+
+specify which devices are linked to others e.g.
+link(pipe1.out, pump1.in);
+or
+link (manifold.out1, pipe2.in)
+
+add to list of links
+ 
+*/
 
 
 let d = 0.25;
