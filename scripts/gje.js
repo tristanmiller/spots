@@ -73,13 +73,149 @@ let clone_matrix = (M) => {
   return(M_clone);
 }
 
+let poiseuille = (radius, length, visc) => {
+  let resistance = 8*visc*length/(Math.PI*Math.pow(radius, 4));
+  return resistance;
+}
+
+console.log(poiseuille(0.032, 5, 8.9e-4));
 
 let pipe1 = {
-  type: 'pipe',
-  terminals: ['in','out'],
-  length: 3,
-  diameter: 0.064,
+  terminals: {
+    in: {p: 0, q: 0, height: 0, idx_p: 2, idx_q: 0},
+    out: {p: 0, q: 0, height: 0, idx_p: 4, idx_q: 1},
+  },
+  states: {
+    default:[
+      [300, 0, -1, 1, 0]
+    ]
+  },
 }
+
+let pipe2 = {
+  terminals: {
+    in: {p: 0, q: 0, height: 0, idx_p: 2, idx_q: 0},
+    out: {p: 0, q: 0, height: 0, idx_p: 4, idx_q: 1},
+  },
+  states: {
+    default:[
+      [500, 0, -1, 1, 0]
+    ]
+  },
+}
+let dP_test = 0;
+
+let pump = {
+  terminals: {
+    in: {p: 0, q: 0, height: 0, idx_p: 2, idx_q: 0},
+    out: {p: 0, q: 0, height: 0, idx_p: 4, idx_q: 1},
+  },
+  states: {
+    default:[
+      [300, 0, -1, 1, dP_test]
+    ]
+  },
+}
+
+let mains = {
+  terminals: {
+    low: {p: 0, q: 0, height: 0, idx_p: 2, idx_q: 0},
+    high: {p: 0, q: 0, height: 0, idx_p: 4, idx_q: 1},
+  },
+  states: {
+    default:[
+      [0, 0, -1, 1, 400000]
+    ]
+  },
+}
+
+let atmo = {
+  terminals: {
+    value: {p: 0, q: 0, height: 0, idx_p: 2, idx_q: 0},
+  },
+  states: {
+    default:[
+      [0, 1, 100000]
+    ]
+  },
+}
+
+
+let thisNet = {
+  devices: [],
+  terminals: [],
+  links: [],
+  nodes: [],
+
+  create_link: function(term1, term2) {
+    let newLink = [term1, term2];
+    let rev = [term2, term1];
+    if (this.terminals.indexOf(term1) > -1 && this.terminals.indexOf(term2) > -1) {
+      if (this.devices.indexOf(newLink) < 0 && this.devices.indexOf(rev) < 0) {
+        this.links.push(newLink);
+      } else {
+        console.log(`A link between ${term1} & ${term2} is already established in this Network`);
+      }
+    } else {
+      console.log('At least one of the terminals is not part of this Network. No link created!');
+    }
+  },
+
+  add_device: function(device) {
+    if (this.devices.indexOf(device) < 0) {
+      this.devices.push(device);
+      if(device.terminals) {
+        for (let t in device.terminals) {
+          this.terminals.push(device.terminals[t]);
+        }
+      } else {
+        console.log(`Device ${device} has no terminals to add to network`);
+      }
+    } else {
+      console.log(`Device ${device} not added - already in this Network.`)
+    }
+  },
+
+  build_nodes: function() {
+    for (let i = 0, l = this.terminals.length; i < l; i++) {
+      let term = this.terminals[i];
+      let newNode = [];
+      if(this.nodes.length == 0) {this.nodes.push([term]);}
+      //need to then seek out the terminals this is linked to.
+      console.log(`nodes length = ${this.nodes.length}`)
+      for (let j = 0, m = this.nodes.length; j < m; j++) {
+        console.log(m);
+        if (this.nodes[j].indexOf(term) < 0) {
+          //i.e. if this terminal is not part of this node..
+          if (j == m - 1) {
+            //if this terminal was not found to be part of any node..
+            newNode.push(term);
+            this.nodes.push(newNode);
+            //now seek out terminals this one is linked to.
+          }
+        } else {
+          console.log(`terminal ${i} is already part of node ${j}`);
+          break;
+        }
+      }
+    }
+  }
+}
+thisNet.add_device(mains);
+thisNet.add_device(pipe1);
+thisNet.add_device(pump);
+thisNet.add_device(pipe2);
+thisNet.add_device(atmo);
+
+thisNet.create_link(mains.terminals.high, pipe1.terminals.in);
+thisNet.create_link(pipe1.terminals.out, pump.terminals.in);
+thisNet.create_link(pump.terminals.out, pipe2.terminals.in);
+thisNet.create_link(pipe2.terminals.out, mains.terminals.low);
+thisNet.create_link(mains.terminals.low, atmo.terminals.value);
+
+thisNet.build_nodes();
+
+console.log(thisNet);
 
 /*
 instantiate a device
@@ -117,7 +253,7 @@ let test_matrix_p = [
   [0, 0, 1, -1, 0, 0, 0, 0,   0],
   [0, 0, 0, 0, 1, 0, 0, 0,   100000],
   [0, 0, 0, 0, -1, 1, 0, 0,   400000],
-  [300, 0, 0, 0, 0, -1, 1, 0,   0],
+  [3242, 0, 0, 0, 0, -1, 1, 0,   0],
   [0, 300, 0, 0, 0, 0, -1, 1,   dP],
   [0, 0, 500, 0, 1, 0, 0, -1,   0]
 ];
