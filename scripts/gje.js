@@ -146,6 +146,7 @@ let thisNet = {
   terminals: [],
   links: [],
   nodes: [],
+  matrix: [],
 
   create_link: function(term1, term2) {
     let newLink = [term1, term2];
@@ -203,8 +204,8 @@ let thisNet = {
         newNode.push(term);
       }
 
-    //need to then seek out the terminals this is linked to.
-    //use the length of newNode as a filter for whether to proceed.
+      //need to then seek out the terminals this is linked to.
+      //use the length of newNode as a filter for whether to proceed.
       if (newNode.length > 0) {
         for (let j = 0, m = this.links.length; j < m; j++) {
           let thisLink = this.links[j];
@@ -222,6 +223,35 @@ let thisNet = {
         this.nodes.push(newNode);
       }
     }
+  },
+
+  build_matrix: function() {
+    this.matrix = [];
+    //initialise matrix of just the right size. Should be T x (T + 1), T = terminals.length
+    for (let i = 0, l = this.terminals.length; i < l; i++) {
+      let thisRow = [];
+      for (let j = 0 ; j < l + 1; j++) {
+        thisRow.push(0);
+      }
+      this.matrix.push(thisRow);
+    }
+
+    //now that the matrix is initialised, begin completing entries
+    for (let i = 1, l = this.devices.length; i < l; i++) {
+      let dev = this.devices[i];
+      for (let t in dev.terminals) {
+        let term = dev.terminals[t];
+        //go through the list of links, find matches
+        for (let j = 0, m = this.links.length; j < m; j++) {
+          let idx = this.links[j].indexOf(term);
+          if (idx == 0) {
+            this.matrix[i - 1][j] = -1;
+          } else if (idx == 1) {
+            this.matrix[i - 1][j] = 1;
+          }
+        }
+      }
+    }
   }
 }
 thisNet.add_device(mains);
@@ -237,6 +267,7 @@ thisNet.create_link(pipe2.terminals.out, mains.terminals.low);
 thisNet.create_link(mains.terminals.low, atmo.terminals.value);
 
 thisNet.build_nodes();
+thisNet.build_matrix();
 
 console.log(thisNet);
 
@@ -276,7 +307,7 @@ let test_matrix_p = [
   [0, 0, 1, -1, 0, 0, 0, 0,   0],
   [0, 0, 0, 0, 1, 0, 0, 0,   100000],
   [0, 0, 0, 0, -1, 1, 0, 0,   400000],
-  [3242, 0, 0, 0, 0, -1, 1, 0,   0],
+  [322, 0, 0, 0, 0, -1, 1, 0,   0],
   [0, 300, 0, 0, 0, 0, -1, 1,   dP],
   [0, 0, 500, 0, 1, 0, 0, -1,   0]
 ];
