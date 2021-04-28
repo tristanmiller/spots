@@ -266,11 +266,15 @@ let thisNet = {
       }
       let eqs = dev.states[state];
       eqs.forEach((eq) => {
-        //check for terms pertaining to currents
+        //check for terms pertaining to flows
         for (let j = 0; j < num_terms; j++) {
           let coefficient = eq[j];
           if (coefficient != 0) {
             //work out which terminal it pertains to
+            //work out which links k this terminal belongs to
+            //for each of these links, work out if it's the first or second entry
+            //if it's the first entry, subtract coefficient from position k of this device's row
+            //if it's the second entry, add this coefficient to position k of this device's row.
             for (let t in dev.terminals) {
               let term = dev.terminals[t];
               if (term.idx == j) {
@@ -285,12 +289,32 @@ let thisNet = {
                 }
               }
             }
-            //work out which links k this terminal belongs to
-            //for each of these links, work out if it's the first or second entry
-            //if it's the first entry, subtract coefficient from position k of this device's row
-            //if it's the second entry, add this coefficient to position k of this device's row.
           }
         }
+        //check for terms pertaining to pressures
+        for (let j = 0; j < num_terms; j++) {
+          let coefficient = eq[j + num_terms];
+          if (coefficient != 0) {
+            //work out which node it pertains to
+            //add this coefficient to position links.length + index of the relevant node
+            for (let t in dev.terminals) {
+              let term = dev.terminals[t];
+              if (term.idx == j) {
+                for (let k = 0, n = this.nodes.length; k < n; k++) {
+                  let node = this.nodes[k];
+                  let idx = node.indexOf(term);
+                  if (idx > -1) {
+                    this.matrix[currentRow][this.links.length + k] = coefficient;
+                  }
+                }
+              }
+            }
+          }
+        }
+        //place the value from the device equation at the end of the matrix row
+        let value = eq[eq.length - 1];
+        this.matrix[currentRow][this.matrix[currentRow].length - 1] = value;
+
         currentRow++;
       });
     }
@@ -314,20 +338,12 @@ thisNet.build_matrix();
 
 console.log(thisNet);
 
-/*
-instantiate a device
-it has terminals named according to that device
+//have to determine which components have dynamic parameters (e.g. those controlled by the user, or those that change state)
+//then each frame, check for changes and then translate these into the matrix.
 
-add device to Network
-terminals are added to the Network's 'terminals' register
-
-specify which devices are linked to others e.g.
-link(pipe1.out, pump1.in);
-or
-link (manifold.out1, pipe2.in)
-
-add to list of links
-*/
+let newMatrix = clone_matrix(thisNet.matrix);
+gje(newMatrix);
+console.log(newMatrix);
 
 
 let d = 0.25;
