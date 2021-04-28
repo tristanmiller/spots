@@ -82,8 +82,8 @@ console.log(poiseuille(0.032, 5, 8.9e-4));
 
 let pipe1 = {
   terminals: {
-    in: {p: 0, q: 0, height: 0, idx_p: 2, idx_q: 0},
-    out: {p: 0, q: 0, height: 0, idx_p: 4, idx_q: 1},
+    in: {p: 0, q: 0, height: 0, idx:0},
+    out: {p: 0, q: 0, height: 0, idx: 1},
   },
   states: {
     default:[
@@ -94,8 +94,8 @@ let pipe1 = {
 
 let pipe2 = {
   terminals: {
-    in: {p: 0, q: 0, height: 0, idx_p: 2, idx_q: 0},
-    out: {p: 0, q: 0, height: 0, idx_p: 4, idx_q: 1},
+    in: {p: 0, q: 0, height: 0, idx: 0},
+    out: {p: 0, q: 0, height: 0, idx: 1},
   },
   states: {
     default:[
@@ -107,8 +107,8 @@ let dP_test = 0;
 
 let pump = {
   terminals: {
-    in: {p: 0, q: 0, height: 0, idx_p: 2, idx_q: 0},
-    out: {p: 0, q: 0, height: 0, idx_p: 4, idx_q: 1},
+    in: {p: 0, q: 0, height: 0, idx: 0},
+    out: {p: 0, q: 0, height: 0, idx: 1},
   },
   states: {
     default:[
@@ -119,8 +119,8 @@ let pump = {
 
 let mains = {
   terminals: {
-    low: {p: 0, q: 0, height: 0, idx_p: 2, idx_q: 0},
-    high: {p: 0, q: 0, height: 0, idx_p: 4, idx_q: 1},
+    low: {p: 0, q: 0, height: 0, idx: 0},
+    high: {p: 0, q: 0, height: 0, idx: 1},
   },
   states: {
     default:[
@@ -131,7 +131,7 @@ let mains = {
 
 let atmo = {
   terminals: {
-    value: {p: 0, q: 0, height: 0, idx_p: 2, idx_q: 0},
+    value: {p: 0, q: 0, height: 0, idx: 0},
   },
   states: {
     default:[
@@ -237,6 +237,7 @@ let thisNet = {
     }
 
     //now that the matrix is initialised, begin completing entries
+    //this loop adds a series of flow-balance equations in the top half of the matrix
     for (let i = 1, l = this.devices.length; i < l; i++) {
       let dev = this.devices[i];
       for (let t in dev.terminals) {
@@ -252,6 +253,48 @@ let thisNet = {
         }
       }
     }
+
+    //this loop adds device-specific equations that usually equate to a pressure value
+    for (let i = 0, l = this.devices.length, currentRow = l - 1; i < l; i++) {
+      //already, rows 0 -> l - 2 are filled, so we have to begin at row l - 1.
+      let dev = this.devices[i];
+      //check each of the device's equations in turn
+      let num_terms = Object.keys(dev.terminals).length;
+      let state = 'default';
+      if (dev.state) {
+        state = dev.state;
+      }
+      let eqs = dev.states[state];
+      eqs.forEach((eq) => {
+        //check for terms pertaining to currents
+        for (let j = 0; j < num_terms; j++) {
+          let coefficient = eq[j];
+          if (coefficient != 0) {
+            //work out which terminal it pertains to
+            for (let t in dev.terminals) {
+              let term = dev.terminals[t];
+              if (term.idx == j) {
+                for (let k = 0, n = this.links.length; k < n; k++) {
+                  let link = this.links[k];
+                  let idx = link.indexOf(term);
+                  if (idx == 0) {
+                    this.matrix[currentRow][k] = -1*coefficient;
+                  } else if (idx == 1) {
+                    this.matrix[currentRow][k] = 1*coefficient;
+                  }
+                }
+              }
+            }
+            //work out which links k this terminal belongs to
+            //for each of these links, work out if it's the first or second entry
+            //if it's the first entry, subtract coefficient from position k of this device's row
+            //if it's the second entry, add this coefficient to position k of this device's row.
+          }
+        }
+        currentRow++;
+      });
+    }
+
   }
 }
 thisNet.add_device(mains);
@@ -307,7 +350,7 @@ let test_matrix_p = [
   [0, 0, 1, -1, 0, 0, 0, 0,   0],
   [0, 0, 0, 0, 1, 0, 0, 0,   100000],
   [0, 0, 0, 0, -1, 1, 0, 0,   400000],
-  [322, 0, 0, 0, 0, -1, 1, 0,   0],
+  [300, 0, 0, 0, 0, -1, 1, 0,   0],
   [0, 300, 0, 0, 0, 0, -1, 1,   dP],
   [0, 0, 500, 0, 1, 0, 0, -1,   0]
 ];
