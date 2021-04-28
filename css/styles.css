@@ -20,6 +20,15 @@
 	color: red;
 }
 
+.diagram {
+	width: 100%;
+	object-fit: scale-down;
+}
+
+.diagram img {
+	width: 100%;
+}
+
 .sink {
 	border: 2px solid red;
 }

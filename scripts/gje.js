@@ -341,6 +341,9 @@ console.log(thisNet);
 //have to determine which components have dynamic parameters (e.g. those controlled by the user, or those that change state)
 //then each frame, check for changes and then translate these into the matrix.
 
+//have to extract from the last column of the solved matrix all of the flows and pressures, then distribute these to the devices
+//build a solutions array. Then, the solutions should be in order of the links list, then the nodes list.
+
 let newMatrix = clone_matrix(thisNet.matrix);
 gje(newMatrix);
 console.log(newMatrix);
