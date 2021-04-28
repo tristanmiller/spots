@@ -167,6 +167,7 @@ let thisNet = {
       if(device.terminals) {
         for (let t in device.terminals) {
           this.terminals.push(device.terminals[t]);
+          device.terminals[t].id = this.terminals.length - 1;
         }
       } else {
         console.log(`Device ${device} has no terminals to add to network`);
@@ -177,26 +178,48 @@ let thisNet = {
   },
 
   build_nodes: function() {
+    this.nodes = [];
     for (let i = 0, l = this.terminals.length; i < l; i++) {
       let term = this.terminals[i];
       let newNode = [];
-      if(this.nodes.length == 0) {this.nodes.push([term]);}
-      //need to then seek out the terminals this is linked to.
-      console.log(`nodes length = ${this.nodes.length}`)
-      for (let j = 0, m = this.nodes.length; j < m; j++) {
-        console.log(m);
-        if (this.nodes[j].indexOf(term) < 0) {
-          //i.e. if this terminal is not part of this node..
-          if (j == m - 1) {
-            //if this terminal was not found to be part of any node..
-            newNode.push(term);
-            this.nodes.push(newNode);
-            //now seek out terminals this one is linked to.
+
+      //first check to see that this terminal is not already part of some node.
+      if (this.nodes.length > 0) {
+        for (let j = 0, m = this.nodes.length; j < m; j++) {
+          if (this.nodes[j].indexOf(term) < 0) {
+            //this node doesn't contain this terminal. Proceed to next node, unless...
+            if (j == m - 1) {
+              //if we have looked at all of the nodes and this terminal wasn't present
+              //add it to newNode
+              newNode.push(term);
+            }
+          } else {
+            //this terminal already is part of a node. We do not need to create a new node.
+            break;
           }
-        } else {
-          console.log(`terminal ${i} is already part of node ${j}`);
-          break;
         }
+      } else {
+        //if there are no nodes yet...
+        newNode.push(term);
+      }
+
+    //need to then seek out the terminals this is linked to.
+    //use the length of newNode as a filter for whether to proceed.
+      if (newNode.length > 0) {
+        for (let j = 0, m = this.links.length; j < m; j++) {
+          let thisLink = this.links[j];
+          if (this.links[j].indexOf(term) > -1) {
+            //if the terminal is found in a link...add the linked terminal to newNode
+            this.links[j].forEach (
+              (terminal) => {
+                if (terminal != term) {
+                  newNode.push(terminal);
+                }
+              }
+            );
+          }
+        }
+        this.nodes.push(newNode);
       }
     }
   }
