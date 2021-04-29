@@ -85,11 +85,36 @@ let pipe1 = {
     in: {p: 0, q: 0, height: 0, idx:0},
     out: {p: 0, q: 0, height: 0, idx: 1},
   },
+
+  res: 300,
+  mass: 12000,
+  dq: 0,
+
   states: {
     default:[
       [300, 0, -1, 1, 0]
     ]
   },
+
+  update: function(time_step) {
+    if (!time_step) {time_step = 1/60;}
+    let q_prev = 0;
+    let q_prev_prev = 0;
+    let term = this.terminals.in;
+    if (term.history) {
+      if (term.history[0]) {
+        q_prev = term.history[0].q;
+      }
+      if (term.history[1]) {
+        q_prev_prev = term.history[1].q;
+      }
+    }
+    this.dq = (q_prev - q_prev_prev)/time_step;
+    console.log(this.dq);
+
+    this.states.default = [this.res, 0, -1, 1, -1*this.mass*this.dq];
+  }
+
 }
 
 let pipe2 = {
@@ -364,7 +389,9 @@ let thisNet = {
     }
     //use this information to update each device. For instance, a relief valve may be triggered by a change in pressure, or
     //a pressure control unit will vary its resistance depending on the pressure drop across its terminals
-
+    this.devices.forEach((dev) => {
+      if(dev.update) {dev.update();}
+    });
 
 
     //remove the last entry from the network's history
@@ -402,6 +429,10 @@ thisNet.create_link(mains.terminals.low, atmo.terminals.value);
 thisNet.build_nodes();
 thisNet.build_matrix();
 thisNet.update();
+thisNet.update();
+thisNet.update();
+
+
 
 
 
