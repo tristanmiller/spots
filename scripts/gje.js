@@ -337,8 +337,15 @@ let thisNet = {
     //distribute the solutions to the terminals listed. Make sure the flows have the right sign.
     //first, go through the list of terminals, and set all of the pressures and flows to zero.
     this.terminals.forEach((t) => {
-        t.p = 0;
-        t.q = 0;
+      if (!t.history) {
+        t.history = [];
+      }
+      t.history.unshift({p: t.p, q: t.q});
+      if (t.history.length > this.max_history) {
+        t.history.pop();
+      }
+      t.p = 0;
+      t.q = 0;
     });
     //go through list of links.
     //for link i, the first terminal gets a flow of -1*sol[i], the second gets sol[i].
@@ -395,6 +402,7 @@ thisNet.create_link(mains.terminals.low, atmo.terminals.value);
 thisNet.build_nodes();
 thisNet.build_matrix();
 thisNet.update();
+
 
 
 console.log(thisNet);
