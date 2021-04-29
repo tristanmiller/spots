@@ -362,7 +362,19 @@ let thisNet = {
 
     //remove the last entry from the network's history
     //clone the solutions array and append to the start of the history array.
-
+    if (this.history.length == 0) {
+      for (let i = 0, l = this.max_history; i < l; i++) {
+        let zeros = [];
+        for (let j = 0, m = this.terminals.length + 1; j < m; j++) {
+          zeros.push(0);
+        }
+        this.history.push(zeros);
+      }
+    }
+    this.history.unshift(sol);
+    if(this.history.length > this.max_history) {
+      this.history.pop();
+    }
     //
 
   }
@@ -383,6 +395,8 @@ thisNet.create_link(mains.terminals.low, atmo.terminals.value);
 thisNet.build_nodes();
 thisNet.build_matrix();
 thisNet.update();
+
+
 console.log(thisNet);
 
 //have to determine which components have dynamic parameters (e.g. those controlled by the user, or those that change state)
@@ -458,7 +472,7 @@ let update = () => {
     P_in_display.style.color = `black`;
   }
   P_out_display.innerHTML = `${Math.round(P_out/1000)} kPa`;
-  flow_display.innerHTML = Math.round(Q_prev);
+  flow_display.innerHTML = `${Math.round(Q_prev)} LPM`;
 
   requestAnimationFrame(update);
 }
