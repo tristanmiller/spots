@@ -78,7 +78,7 @@ let poiseuille = (radius, length, visc) => {
   return resistance;
 }
 
-console.log(poiseuille(0.032, 5, 8.9e-4));
+console.log(poiseuille(0.032, 30, 8.9e-4));
 
 let pipe1 = {
   terminals: {
@@ -87,7 +87,7 @@ let pipe1 = {
   },
 
   res: 300,
-  mass: 12000,
+  mass: 0,
   dq: 0,
 
   states: {
@@ -96,8 +96,7 @@ let pipe1 = {
     ]
   },
 
-  update: function(time_step) {
-    if (!time_step) {time_step = 1/60;}
+  update: function(time_step = 1/60) {
     let q_prev = 0;
     let q_prev_prev = 0;
     let term = this.terminals.in;
@@ -110,9 +109,7 @@ let pipe1 = {
       }
     }
     this.dq = (q_prev - q_prev_prev)/time_step;
-    console.log(this.dq);
-
-    this.states.default = [this.res, 0, -1, 1, -1*this.mass*this.dq];
+    this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq];
   }
 
 }
@@ -122,11 +119,33 @@ let pipe2 = {
     in: {p: 0, q: 0, height: 0, idx: 0},
     out: {p: 0, q: 0, height: 0, idx: 1},
   },
+
+  res: 500,
+  mass: 1,
+  dq: 0,
+
   states: {
     default:[
       [500, 0, -1, 1, 0]
     ]
   },
+
+  update: function(time_step = 1/60) {
+    let q_prev = 0;
+    let q_prev_prev = 0;
+    let term = this.terminals.in;
+    if (term.history) {
+      if (term.history[0]) {
+        q_prev = term.history[0].q;
+      }
+      if (term.history[1]) {
+        q_prev_prev = term.history[1].q;
+      }
+    }
+    this.dq = (q_prev - q_prev_prev)/time_step;
+    this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq];
+  }
+
 }
 let dP_test = 0;
 
@@ -135,11 +154,30 @@ let pump = {
     in: {p: 0, q: 0, height: 0, idx: 0},
     out: {p: 0, q: 0, height: 0, idx: 1},
   },
+
+  revs: 0,
+  res: 300,
+  dP: 0,
+  D_impeller: 0.25,
+  A: Math.PI*Math.pow(0.032, 2),
+
+
   states: {
     default:[
-      [300, 0, -1, 1, dP_test]
+      [300, 0, -1, 1, 0]
     ]
   },
+
+  update: function(g = 9.81, rho = 997) {
+    let q_prev = 0;
+    if (this.terminals.in.history) {
+      if (this.terminals.in.history[0]) {
+        q_prev = this.terminals.in.history[0].q;
+      }
+    }
+    this.dP = 0.00014*g*rho*Math.pow(this.D_impeller*this.revs,2) - 0.5*rho*Math.pow((1/60000)*q_prev/this.A,2);
+    this.states.default[0] = [this.res, 0, -1, 1, this.dP];
+  }
 }
 
 let mains = {
@@ -357,7 +395,6 @@ let thisNet = {
     for (let i = 0, l = solved.length; i < l; i++) {
       sol.push(solved[i][l]);
     }
-    console.log(sol);
 
     //distribute the solutions to the terminals listed. Make sure the flows have the right sign.
     //first, go through the list of terminals, and set all of the pressures and flows to zero.
@@ -428,51 +465,12 @@ thisNet.create_link(mains.terminals.low, atmo.terminals.value);
 
 thisNet.build_nodes();
 thisNet.build_matrix();
-thisNet.update();
-thisNet.update();
-thisNet.update();
 
 
 
 
 
 console.log(thisNet);
-
-//have to determine which components have dynamic parameters (e.g. those controlled by the user, or those that change state)
-//then each frame, check for changes and then translate these into the matrix.
-
-
-
-let newMatrix = clone_matrix(thisNet.matrix);
-gje(newMatrix);
-console.log(newMatrix);
-
-
-let d = 0.25;
-let revs = 0;
-let rho = 997;
-let g = 9.81;
-let A = Math.PI*0.064*0.064;
-let Q_prev = 0;
-let Q_prev_prev = 0;
-let dt = 1/60;
-let dP = 0.00014*g*rho*Math.pow(d*revs,2) - 0.5*rho*Math.pow((1/60000)*Q_prev/A,2);
-
-console.log(dP);
-
-
-
-let test_matrix_p = [
-  [1, -1, 0, 0, 0, 0, 0, 0,   0],
-  [0, 1, -1, 0, 0, 0, 0, 0,   0],
-  [0, 0, 1, -1, 0, 0, 0, 0,   0],
-  [0, 0, 0, 0, 1, 0, 0, 0,   100000],
-  [0, 0, 0, 0, -1, 1, 0, 0,   400000],
-  [300, 0, 0, 0, 0, -1, 1, 0,   0],
-  [0, 300, 0, 0, 0, 0, -1, 1,   dP],
-  [0, 0, 500, 0, 1, 0, 0, -1,   0]
-];
-
 
 let RPM_slider = document.getElementById('RPM');
 let RPM_output = document.getElementById('RPM_value');
@@ -481,11 +479,11 @@ let P_out_display = document.getElementById('P_outlet');
 let flow_display = document.getElementById('flowrate');
 
 RPM_output.innerHTML = RPM_slider.value;
-revs = RPM_slider.value;
+pump.revs = RPM_slider.value;
 
 RPM_slider.oninput = function() {
   RPM_output.innerHTML = this.value;
-  revs = this.value;
+  pump.revs = this.value;
 }
 
 
@@ -493,25 +491,18 @@ RPM_slider.oninput = function() {
 
 
 let update = () => {
-  let M_solved = clone_matrix(test_matrix_p);
-  gje(M_solved);
-  Q_prev_prev = Q_prev;
-  Q_prev = M_solved[0][M_solved[0].length - 1];
-  dP = 0.00014*g*rho*Math.pow(d*revs,2) - 0.5*rho*Math.pow((1/60000)*Q_prev/A,2);
-  test_matrix_p[6][8] = dP;
-  test_matrix_p[5][8] = -12000*(Q_prev - Q_prev_prev)*dt;
-  test_matrix_p[7][8] = -12000*(Q_prev - Q_prev_prev)*dt;
+  // thisNet.build_nodes();
+  thisNet.build_matrix();
+  thisNet.update();
 
-  let P_in = M_solved[6][8];
-  let P_out = M_solved[7][8];
-  P_in_display.innerHTML = `${Math.round(P_in/1000)} kPa`;
-  if(P_in < 100000) {
+  P_in_display.innerHTML = `${Math.round(pump.terminals.in.p/1000)} kPa`;
+  if(pump.terminals.in.p < 100000) {
     P_in_display.style.color = `red`;
   } else {
     P_in_display.style.color = `black`;
   }
-  P_out_display.innerHTML = `${Math.round(P_out/1000)} kPa`;
-  flow_display.innerHTML = `${Math.round(Q_prev)} LPM`;
+  P_out_display.innerHTML = `${Math.round(pump.terminals.out.p/1000)} kPa`;
+  flow_display.innerHTML = `${Math.round(pump.terminals.in.q)} LPM`;
 
   requestAnimationFrame(update);
 }
