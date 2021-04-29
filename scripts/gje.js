@@ -147,6 +147,8 @@ let thisNet = {
   links: [],
   nodes: [],
   matrix: [],
+  solutions: [],
+  history: [],
 
   create_link: function(term1, term2) {
     let newLink = [term1, term2];
@@ -314,12 +316,56 @@ let thisNet = {
         //place the value from the device equation at the end of the matrix row
         let value = eq[eq.length - 1];
         this.matrix[currentRow][this.matrix[currentRow].length - 1] = value;
-
         currentRow++;
       });
     }
+  },
+
+  update: function() {
+    //solve a clone of the matrix
+    let solved = clone_matrix(this.matrix);
+    gje(solved);
+    //extract from the last column of the solved matrix all of the flows and pressures
+    //build a solutions array. Then, the solutions should be in order of the links list, then the nodes list.
+    let sol = [];
+    for (let i = 0, l = solved.length; i < l; i++) {
+      sol.push(solved[i][l]);
+    }
+    console.log(sol);
+
+    //distribute the solutions to the terminals listed. Make sure the flows have the right sign.
+    //first, go through the list of terminals, and set all of the pressures and flows to zero.
+    this.terminals.forEach((t) => {
+        t.p = 0;
+        t.q = 0;
+    });
+    //go through list of links.
+    //for link i, the first terminal gets a flow of -1*sol[i], the second gets sol[i].
+    for (let i = 0, l = this.links.length; i < l; i++) {
+      let link = this.links[i];
+      link[0].q -= sol[i];
+      link[1].q += sol[i];
+    }
+
+    //go through the list of nodes. for node i, each terminal gets a pressure of sol[i + this.links.length];
+    for (let i = 0, l = this.nodes.length; i < l; i++) {
+      let node = this.nodes[i];
+      node.forEach((t) => {
+        t.p += sol[i + this.links.length];
+      });
+    }
+    //use this information to update each device. For instance, a relief valve may be triggered by a change in pressure, or
+    //a pressure control unit will vary its resistance depending on the pressure drop across its terminals
+
+
+
+    //remove the last entry from the network's history
+    //clone the solutions array and append to the start of the history array.
+
+    //
 
   }
+
 }
 thisNet.add_device(mains);
 thisNet.add_device(pipe1);
@@ -335,14 +381,13 @@ thisNet.create_link(mains.terminals.low, atmo.terminals.value);
 
 thisNet.build_nodes();
 thisNet.build_matrix();
-
+thisNet.update();
 console.log(thisNet);
 
 //have to determine which components have dynamic parameters (e.g. those controlled by the user, or those that change state)
 //then each frame, check for changes and then translate these into the matrix.
 
-//have to extract from the last column of the solved matrix all of the flows and pressures, then distribute these to the devices
-//build a solutions array. Then, the solutions should be in order of the links list, then the nodes list.
+
 
 let newMatrix = clone_matrix(thisNet.matrix);
 gje(newMatrix);
