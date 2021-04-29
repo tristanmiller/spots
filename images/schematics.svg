@@ -147,7 +147,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -161,42 +161,56 @@
        width="23.668921"
        height="25.180824"
        x="91.353043"
-       y="42.783096" />
+       y="42.783096"
+       inkscape:export-xdpi="191.78999"
+       inkscape:export-ydpi="191.78999" />
     <rect
        style="fill:none;stroke:#000000;stroke-width:1.32292;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.992126"
        id="rect837"
        width="31.372023"
        height="6.9925594"
        x="58.6581"
-       y="51.877228" />
+       y="51.877228"
+       inkscape:export-xdpi="191.78999"
+       inkscape:export-ydpi="191.78999" />
     <rect
        style="fill:none;stroke:#000000;stroke-width:1.32292;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.992126"
        id="rect839"
        width="31.372023"
        height="6.9925594"
        x="116.34488"
-       y="51.877228" />
+       y="51.877228"
+       inkscape:export-xdpi="191.78999"
+       inkscape:export-ydpi="191.78999" />
     <circle
        style="fill:none;stroke:#000000;stroke-width:1.32292;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.992126"
        id="path841"
        cx="48.925209"
        cy="55.373508"
-       r="8.4099703" />
+       r="8.4099703"
+       inkscape:export-xdpi="191.78999"
+       inkscape:export-ydpi="191.78999" />
     <circle
        style="fill:none;stroke:#000000;stroke-width:1.32292;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.992126"
        id="circle843"
        cx="157.4498"
        cy="55.373508"
-       r="8.4099703" />
+       r="8.4099703"
+       inkscape:export-xdpi="191.78999"
+       inkscape:export-ydpi="191.78999" />
     <path
        style="fill:none;stroke:#000000;stroke-width:2.51354;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Mend)"
        d="M 77.674107,28.348214 H 128.86489"
-       id="path845" />
+       id="path845"
+       inkscape:export-xdpi="191.78999"
+       inkscape:export-ydpi="191.78999" />
     <text
        xml:space="preserve"
        id="text1461"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect1463);fill:#000000;fill-opacity:1;stroke:none;"
-       transform="translate(18.155338,-14.517326)"><tspan
+       transform="translate(18.155338,-14.517326)"
+       inkscape:export-xdpi="191.78999"
+       inkscape:export-ydpi="191.78999"><tspan
          x="74.839844"
          y="89.214345"><tspan
            style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal">pump</tspan></tspan></text>
@@ -206,7 +220,9 @@
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect1463-5);fill:#000000;fill-opacity:1;stroke:none;"
        transform="translate(56.057221,-17.821333)"
        x="15.68553"
-       y="0"><tspan
+       y="0"
+       inkscape:export-xdpi="191.78999"
+       inkscape:export-ydpi="191.78999"><tspan
          x="92.431879"
          y="89.214345"><tspan
            style="text-align:center;text-anchor:middle">drain
@@ -220,7 +236,9 @@
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect1463-5-5);fill:#000000;fill-opacity:1;stroke:none;"
        transform="translate(-52.467369,-18.3505)"
        x="15.68553"
-       y="0"><tspan
+       y="0"
+       inkscape:export-xdpi="191.78999"
+       inkscape:export-ydpi="191.78999"><tspan
          x="90.80407"
          y="89.214345"><tspan
            style="text-align:center;text-anchor:middle">mains
@@ -234,7 +252,9 @@
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect1463-5-5-7);fill:#000000;fill-opacity:1;stroke:none;"
        transform="translate(-11.925516,-38.850204)"
        x="15.68553"
-       y="0"><tspan
+       y="0"
+       inkscape:export-xdpi="191.78999"
+       inkscape:export-ydpi="191.78999"><tspan
          x="74.839844"
          y="89.214345"><tspan
            style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal">supply line</tspan></tspan></text>
@@ -244,7 +264,9 @@
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect1463-5-5-7-8);fill:#000000;fill-opacity:1;stroke:none;"
        transform="translate(44.284341,-36.275402)"
        x="15.68553"
-       y="0"><tspan
+       y="0"
+       inkscape:export-xdpi="191.78999"
+       inkscape:export-ydpi="191.78999"><tspan
          x="74.839844"
          y="86.639539"><tspan
            style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal">delivery line</tspan></tspan></text>
@@ -254,7 +276,9 @@
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect1463-5-5-7-2);fill:#000000;fill-opacity:1;stroke:none;"
        transform="translate(2.6889721,-63.087044)"
        x="15.68553"
-       y="0"><tspan
+       y="0"
+       inkscape:export-xdpi="191.78999"
+       inkscape:export-ydpi="191.78999"><tspan
          x="74.839844"
          y="86.639539"><tspan
            style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333px;font-family:sans-serif;-inkscape-font-specification:'sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal">flow direction</tspan></tspan></text>
