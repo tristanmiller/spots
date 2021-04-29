@@ -149,6 +149,7 @@ let thisNet = {
   matrix: [],
   solutions: [],
   history: [],
+  max_history: 5,
 
   create_link: function(term1, term2) {
     let newLink = [term1, term2];
