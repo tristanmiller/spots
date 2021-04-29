@@ -121,7 +121,7 @@ let pipe2 = {
   },
 
   res: 500,
-  mass: 1,
+  mass: 0,
   dq: 0,
 
   states: {
@@ -156,7 +156,7 @@ let pump = {
   },
 
   revs: 0,
-  res: 300,
+  res: 200,
   dP: 0,
   D_impeller: 0.25,
   A: Math.PI*Math.pow(0.032, 2),
@@ -164,7 +164,7 @@ let pump = {
 
   states: {
     default:[
-      [300, 0, -1, 1, 0]
+      [200, 0, -1, 1, 0]
     ]
   },
 
