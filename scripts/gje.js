@@ -80,6 +80,34 @@ let poiseuille = (radius, length, visc) => {
 
 console.log(poiseuille(0.032, 30, 8.9e-4));
 
+let tank = {
+  terminals: {
+    in: {p: 0, q: 0, height: 0, idx:0},
+    out: {p: 0, q: 0, height: 0, idx: 1},
+  },
+
+  height: 1.5,
+  cap: 3000,
+  stored: 3000,
+
+  states: {
+    default:[
+      [0, 0, -1, 1, 2*997*9.81]
+    ]
+  },
+
+  update: function(time_step = 1/60) {
+    let outflow = this.terminals.out.q*time_step;
+    this.stored -= outflow;
+    this.height = this.stored/2000;
+
+    this.states.default[0] = [0,0,-1,1, this.height*997*9.81];
+    console.log(this.stored);
+  }
+
+}
+
+
 let pipe1 = {
   terminals: {
     in: {p: 0, q: 0, height: 0, idx:0},
