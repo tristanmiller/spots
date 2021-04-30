@@ -87,7 +87,7 @@ let pipe1 = {
   },
 
   res: 100,
-  mass: 0,
+  mass: 100,
   dq: 0,
 
   states: {
@@ -109,7 +109,7 @@ let pipe1 = {
       }
     }
     this.dq = (q_prev - q_prev_prev)/time_step;
-    this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq];
+    this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq/(60000*Math.PI*0.032*0.032)];
   }
 
 }
@@ -121,7 +121,7 @@ let pipe2 = {
   },
 
   res: 500,
-  mass: 0,
+  mass: 100,
   dq: 0,
 
   states: {
@@ -143,7 +143,7 @@ let pipe2 = {
       }
     }
     this.dq = (q_prev - q_prev_prev)/time_step;
-    this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq];
+    this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq/(60000*Math.PI*0.032*0.032)];
   }
 }
 
@@ -243,7 +243,7 @@ let pump = {
   },
 
   revs: 0,
-  res: 200,
+  res: 100,
   dP: 0,
   D_impeller: 0.25,
   A: Math.PI*Math.pow(0.032, 2),
@@ -267,6 +267,9 @@ let pump = {
       }
     }
     this.dP = 0.00014*g*rho*Math.pow(this.D_impeller*this.revs,2) - 0.5*rho*Math.pow((1/60000)*q_prev/this.A,2);
+    if (this.terminals.in.p < 3000) {
+      this.dP *= 0.01;
+    }
     this.states.default[0] = [this.res, 0, -1, 1, this.dP];
   }
 }
