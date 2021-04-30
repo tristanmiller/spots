@@ -86,13 +86,13 @@ let pipe1 = {
     out: {p: 0, q: 0, height: 0, idx: 1},
   },
 
-  res: 300,
+  res: 100,
   mass: 0,
   dq: 0,
 
   states: {
     default:[
-      [300, 0, -1, 1, 0]
+      [100, 0, -1, 1, 0]
     ]
   },
 
@@ -145,9 +145,96 @@ let pipe2 = {
     this.dq = (q_prev - q_prev_prev)/time_step;
     this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq];
   }
-
 }
-let dP_test = 0;
+
+
+let valve1 = {
+  terminals: {
+    in: {p: 0, q: 0, height: 0, idx: 0},
+    out: {p: 0, q: 0, height: 0, idx: 1},
+  },
+
+  open: 0,
+  res_default: 10,
+  res: 0,
+  mass: 0,
+  dq: 0,
+
+  states: {
+    default:[
+      [0, 0, -1, 1, 0]
+    ],
+    off: [
+      [1, 0, 0, 0, 0]
+    ],
+  },
+
+  update: function(time_step = 1/60) {
+    if(this.open > 0) {
+      this.state = 'default';
+      this.res = this.res_default/Math.pow(this.open, 2);
+      let q_prev = 0;
+      let q_prev_prev = 0;
+      let term = this.terminals.in;
+      if (term.history) {
+        if (term.history[0]) {
+          q_prev = term.history[0].q;
+        }
+        if (term.history[1]) {
+          q_prev_prev = term.history[1].q;
+        }
+      }
+      this.dq = (q_prev - q_prev_prev)/time_step;
+      this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq];
+    } else {
+      this.state = 'off';
+    }
+  }
+}
+
+let valve2 = {
+  terminals: {
+    in: {p: 0, q: 0, height: 0, idx: 0},
+    out: {p: 0, q: 0, height: 0, idx: 1},
+  },
+
+  open: 0,
+  res_default: 10,
+  res: 0,
+  mass: 0,
+  dq: 0,
+
+  states: {
+    default:[
+      [0, 0, -1, 1, 0]
+    ],
+    off: [
+      [1, 0, 0, 0, 0]
+    ],
+  },
+
+  update: function(time_step = 1/60) {
+    if(this.open > 0) {
+      this.state = 'default';
+      this.res = this.res_default/Math.pow(this.open, 2);
+      let q_prev = 0;
+      let q_prev_prev = 0;
+      let term = this.terminals.in;
+      if (term.history) {
+        if (term.history[0]) {
+          q_prev = term.history[0].q;
+        }
+        if (term.history[1]) {
+          q_prev_prev = term.history[1].q;
+        }
+      }
+      this.dq = (q_prev - q_prev_prev)/time_step;
+      this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq];
+    } else {
+      this.state = 'off';
+    }
+  }
+}
 
 let pump = {
   terminals: {
@@ -165,10 +252,14 @@ let pump = {
   states: {
     default:[
       [200, 0, -1, 1, 0]
-    ]
+    ],
+    cav: [
+      [0, 0, -1, 1, 0]
+    ],
   },
 
   update: function(g = 9.81, rho = 997) {
+    this.state = 'default';
     let q_prev = 0;
     if (this.terminals.in.history) {
       if (this.terminals.in.history[0]) {
@@ -453,13 +544,17 @@ let thisNet = {
 }
 thisNet.add_device(mains);
 thisNet.add_device(pipe1);
+thisNet.add_device(valve1);
 thisNet.add_device(pump);
+thisNet.add_device(valve2);
 thisNet.add_device(pipe2);
 thisNet.add_device(atmo);
 
 thisNet.create_link(mains.terminals.high, pipe1.terminals.in);
-thisNet.create_link(pipe1.terminals.out, pump.terminals.in);
-thisNet.create_link(pump.terminals.out, pipe2.terminals.in);
+thisNet.create_link(pipe1.terminals.out, valve1.terminals.in);
+thisNet.create_link(valve1.terminals.out, pump.terminals.in);
+thisNet.create_link(pump.terminals.out, valve2.terminals.in);
+thisNet.create_link(valve2.terminals.out, pipe2.terminals.in);
 thisNet.create_link(pipe2.terminals.out, mains.terminals.low);
 thisNet.create_link(mains.terminals.low, atmo.terminals.value);
 
@@ -474,6 +569,10 @@ console.log(thisNet);
 
 let RPM_slider = document.getElementById('RPM');
 let RPM_output = document.getElementById('RPM_value');
+let inlet_valve_slider = document.getElementById('inlet_valve');
+let inlet_valve_output = document.getElementById('inlet_valve_value');
+let outlet_valve_slider = document.getElementById('outlet_valve');
+let outlet_valve_output = document.getElementById('outlet_valve_value');
 let P_in_display = document.getElementById('P_inlet');
 let P_out_display = document.getElementById('P_outlet');
 let flow_display = document.getElementById('flowrate');
@@ -486,7 +585,21 @@ RPM_slider.oninput = function() {
   pump.revs = this.value;
 }
 
+inlet_valve_output.innerHTML = inlet_valve_slider.value;
+valve1.open = inlet_valve_slider.value/100;
 
+inlet_valve_slider.oninput = function() {
+  inlet_valve_output.innerHTML = `${this.value}%`;
+  valve1.open = this.value/100;
+}
+
+outlet_valve_output.innerHTML = outlet_valve_slider.value;
+valve2.open = outlet_valve_slider.value/100;
+
+outlet_valve_slider.oninput = function() {
+  outlet_valve_output.innerHTML = `${this.value}%`;
+  valve2.open = this.value/100;
+}
 
 
 
