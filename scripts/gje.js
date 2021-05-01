@@ -92,17 +92,16 @@ let tank = {
 
   states: {
     default:[
-      [0, 0, -1, 1, 2*997*9.81]
+      [0, 0, -1, 1, 1.5*997*9.81]
     ]
   },
 
   update: function(time_step = 1/60) {
     let outflow = this.terminals.out.q*time_step;
-    this.stored -= outflow;
+    this.stored += outflow;
     this.height = this.stored/2000;
-
     this.states.default[0] = [0,0,-1,1, this.height*997*9.81];
-    console.log(this.stored);
+    // console.log(this.stored);
   }
 
 }
@@ -296,7 +295,8 @@ let pump = {
     }
     this.dP = 0.00014*g*rho*Math.pow(this.D_impeller*this.revs,2) - 0.5*rho*Math.pow((1/60000)*q_prev/this.A,2);
     if (this.terminals.in.p < 3000) {
-      this.dP *= 0.01;
+      // this.dP *= 0.3;
+      this.revs *= 0.9;
     }
     this.states.default[0] = [this.res, 0, -1, 1, this.dP];
   }
@@ -315,6 +315,17 @@ let mains = {
 }
 
 let atmo = {
+  terminals: {
+    value: {p: 0, q: 0, height: 0, idx: 0},
+  },
+  states: {
+    default:[
+      [0, 1, 100000]
+    ]
+  },
+}
+
+let atmo2 = {
   terminals: {
     value: {p: 0, q: 0, height: 0, idx: 0},
   },
@@ -492,6 +503,7 @@ let thisNet = {
                   let node = this.nodes[k];
                   let idx = node.indexOf(term);
                   if (idx > -1) {
+                    // console.log(currentRow, this.links.length + k);
                     this.matrix[currentRow][this.links.length + k] = coefficient;
                   }
                 }
@@ -504,6 +516,7 @@ let thisNet = {
         this.matrix[currentRow][this.matrix[currentRow].length - 1] = value;
         currentRow++;
       });
+
     }
   },
 
@@ -580,14 +593,16 @@ thisNet.add_device(pump);
 thisNet.add_device(valve2);
 thisNet.add_device(pipe2);
 thisNet.add_device(atmo);
-
+// thisNet.add_device(tank);
+// thisNet.add_device(atmo2);
+// thisNet.create_link(atmo.terminals.value, tank.terminals.in);
 thisNet.create_link(mains.terminals.high, pipe1.terminals.in);
 thisNet.create_link(pipe1.terminals.out, valve1.terminals.in);
 thisNet.create_link(valve1.terminals.out, pump.terminals.in);
 thisNet.create_link(pump.terminals.out, valve2.terminals.in);
 thisNet.create_link(valve2.terminals.out, pipe2.terminals.in);
-thisNet.create_link(pipe2.terminals.out, mains.terminals.low);
-thisNet.create_link(mains.terminals.low, atmo.terminals.value);
+thisNet.create_link(pipe2.terminals.out, atmo.terminals.value);
+thisNet.create_link(atmo.terminals.value, mains.terminals.low);
 
 thisNet.build_nodes();
 thisNet.build_matrix();
