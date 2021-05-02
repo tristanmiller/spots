@@ -427,7 +427,7 @@ let thisNet = {
   build_matrix: function() {
     this.matrix = [];
     //initialise matrix of just the right size. Should be T x (T + 1), T = terminals.length
-    for (let i = 0, l = this.terminals.length; i < l; i++) {
+    for (let i = 0, l = this.links.length + this.nodes.length; i < l; i++) {
       let thisRow = [];
       for (let j = 0 ; j < l + 1; j++) {
         thisRow.push(0);
@@ -504,6 +504,14 @@ let thisNet = {
                   let idx = node.indexOf(term);
                   if (idx > -1) {
                     // console.log(currentRow, this.links.length + k);
+                    // if(!this.matrix[currentRow]) {
+                    //   let newRow = [];
+                    //   while (newRow.length < this.terminals.length + 1) {
+                    //     newRow.push(0);
+                    //     // console.log('psh');
+                    //   }
+                    //   this.matrix.push(newRow);
+                    // }
                     this.matrix[currentRow][this.links.length + k] = coefficient;
                   }
                 }
@@ -586,23 +594,23 @@ let thisNet = {
   }
 
 }
-thisNet.add_device(mains);
+// thisNet.add_device(mains);
 thisNet.add_device(pipe1);
 thisNet.add_device(valve1);
 thisNet.add_device(pump);
 thisNet.add_device(valve2);
 thisNet.add_device(pipe2);
 thisNet.add_device(atmo);
-// thisNet.add_device(tank);
+thisNet.add_device(tank);
 // thisNet.add_device(atmo2);
-// thisNet.create_link(atmo.terminals.value, tank.terminals.in);
-thisNet.create_link(mains.terminals.high, pipe1.terminals.in);
+thisNet.create_link(atmo.terminals.value, tank.terminals.in);
+thisNet.create_link(tank.terminals.out, pipe1.terminals.in);
 thisNet.create_link(pipe1.terminals.out, valve1.terminals.in);
 thisNet.create_link(valve1.terminals.out, pump.terminals.in);
 thisNet.create_link(pump.terminals.out, valve2.terminals.in);
 thisNet.create_link(valve2.terminals.out, pipe2.terminals.in);
 thisNet.create_link(pipe2.terminals.out, atmo.terminals.value);
-thisNet.create_link(atmo.terminals.value, mains.terminals.low);
+// thisNet.create_link(atmo.terminals.value, mains.terminals.low);
 
 thisNet.build_nodes();
 thisNet.build_matrix();
