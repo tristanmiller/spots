@@ -331,7 +331,7 @@ let atmo2 = {
   },
   states: {
     default:[
-      [0, 1, 100000]
+      [0, 1, 500000]
     ]
   },
 }
@@ -339,6 +339,7 @@ let atmo2 = {
 
 let thisNet = {
   devices: [],
+  devices_multiterminal: [],
   terminals: [],
   links: [],
   nodes: [],
@@ -368,6 +369,9 @@ let thisNet = {
         for (let t in device.terminals) {
           this.terminals.push(device.terminals[t]);
           device.terminals[t].id = this.terminals.length - 1;
+        }
+        if(Object.keys(device.terminals).length > 1) {
+          this.devices_multiterminal.push(device);
         }
       } else {
         console.log(`Device ${device} has no terminals to add to network`);
@@ -434,27 +438,26 @@ let thisNet = {
       }
       this.matrix.push(thisRow);
     }
-
     //now that the matrix is initialised, begin completing entries
     //this loop adds a series of flow-balance equations in the top half of the matrix
-    for (let i = 1, l = this.devices.length; i < l; i++) {
-      let dev = this.devices[i];
-      for (let t in dev.terminals) {
-        let term = dev.terminals[t];
-        //go through the list of links, find matches
-        for (let j = 0, m = this.links.length; j < m; j++) {
-          let idx = this.links[j].indexOf(term);
-          if (idx == 0) {
-            this.matrix[i - 1][j] = -1;
-          } else if (idx == 1) {
-            this.matrix[i - 1][j] = 1;
+    for (let i = 0, l = this.devices_multiterminal.length; i < l; i++) {
+      let dev = this.devices_multiterminal[i];
+        for (let t in dev.terminals) {
+          let term = dev.terminals[t];
+          //go through the list of links, find matches
+          for (let j = 0, m = this.links.length; j < m; j++) {
+            let idx = this.links[j].indexOf(term);
+            if (idx == 0) {
+              this.matrix[i][j] = -1;
+            } else if (idx == 1) {
+              this.matrix[i][j] = 1;
+            }
           }
         }
-      }
     }
 
     //this loop adds device-specific equations that usually equate to a pressure value
-    for (let i = 0, l = this.devices.length, currentRow = l - 1; i < l; i++) {
+    for (let i = 0, l = this.devices.length, currentRow = this.devices_multiterminal.length; i < l; i++) {
       //already, rows 0 -> l - 2 are filled, so we have to begin at row l - 1.
       let dev = this.devices[i];
       //check each of the device's equations in turn
@@ -601,10 +604,10 @@ thisNet.add_device(pump);
 thisNet.add_device(valve2);
 thisNet.add_device(pipe2);
 thisNet.add_device(atmo);
-thisNet.add_device(tank);
-// thisNet.add_device(atmo2);
-thisNet.create_link(atmo.terminals.value, tank.terminals.in);
-thisNet.create_link(tank.terminals.out, pipe1.terminals.in);
+// thisNet.add_device(tank);
+thisNet.add_device(atmo2);
+thisNet.create_link(atmo2.terminals.value, pipe1.terminals.in);
+// thisNet.create_link(tank.terminals.out, pipe1.terminals.in);
 thisNet.create_link(pipe1.terminals.out, valve1.terminals.in);
 thisNet.create_link(valve1.terminals.out, pump.terminals.in);
 thisNet.create_link(pump.terminals.out, valve2.terminals.in);
@@ -663,7 +666,7 @@ let update = () => {
   thisNet.update();
 
   P_in_display.innerHTML = `${Math.round(pump.terminals.in.p/1000)} kPa`;
-  if(pump.terminals.in.p < 100000) {
+  if(Math.round(pump.terminals.in.p) < 100000) {
     P_in_display.style.color = `red`;
   } else {
     P_in_display.style.color = `black`;
@@ -673,6 +676,5 @@ let update = () => {
 
   requestAnimationFrame(update);
 }
-
 
 update();
