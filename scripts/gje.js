@@ -113,13 +113,13 @@ let pipe1 = {
     out: {p: 0, q: 0, height: 0, idx: 1},
   },
 
-  res: 100,
+  res: 6800000,
   mass: 100,
   dq: 0,
 
   states: {
     default:[
-      [100, 0, -1, 1, 0]
+      [6800000, 0, -1, 1, 0]
     ]
   },
 
@@ -147,13 +147,13 @@ let pipe2 = {
     out: {p: 0, q: 0, height: 0, idx: 1},
   },
 
-  res: 500,
+  res: 3400000,
   mass: 100,
   dq: 0,
 
   states: {
     default:[
-      [500, 0, -1, 1, 0]
+      [3400000, 0, -1, 1, 0]
     ]
   },
 
@@ -182,7 +182,7 @@ let valve1 = {
   },
 
   open: 0,
-  res_default: 10,
+  res_default: 100000,
   res: 0,
   mass: 0,
   dq: 0,
@@ -226,7 +226,7 @@ let valve2 = {
   },
 
   open: 0,
-  res_default: 10,
+  res_default: 100000,
   res: 0,
   mass: 0,
   dq: 0,
@@ -270,7 +270,7 @@ let pump = {
   },
 
   revs: 0,
-  res: 100,
+  res: 1000000,
   dP: 0,
   D_impeller: 0.25,
   A: Math.PI*Math.pow(0.032, 2),
@@ -278,7 +278,7 @@ let pump = {
 
   states: {
     default:[
-      [200, 0, -1, 1, 0]
+      [1000000, 0, -1, 1, 0]
     ],
     cav: [
       [0, 0, -1, 1, 0]
@@ -293,7 +293,7 @@ let pump = {
         q_prev = this.terminals.in.history[0].q;
       }
     }
-    this.dP = 0.00014*g*rho*Math.pow(this.D_impeller*this.revs,2) - 0.5*rho*Math.pow((1/60000)*q_prev/this.A,2);
+    this.dP = 0.00014*g*rho*Math.pow(this.D_impeller*this.revs,2) - 0.5*rho*Math.pow((1/60000)*q_prev/this.A,2); //this one assumes q_prev in LPM
     if (this.terminals.in.p < 3000) {
       // this.dP *= 0.3;
       this.revs *= 0.9;
@@ -672,7 +672,7 @@ let update = () => {
     P_in_display.style.color = `black`;
   }
   P_out_display.innerHTML = `${Math.round(pump.terminals.out.p/1000)} kPa`;
-  flow_display.innerHTML = `${Math.round(pump.terminals.in.q)} LPM`;
+  flow_display.innerHTML = `${Math.round(pump.terminals.in.q*60000)} LPM`;
 
   requestAnimationFrame(update);
 }
