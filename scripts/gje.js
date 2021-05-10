@@ -136,7 +136,7 @@ let pipe1 = {
       }
     }
     this.dq = (q_prev - q_prev_prev)/time_step;
-    this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq/(60000*Math.PI*0.032*0.032)];
+    this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq/(Math.PI*0.032*0.032)];
   }
 
 }
@@ -170,7 +170,7 @@ let pipe2 = {
       }
     }
     this.dq = (q_prev - q_prev_prev)/time_step;
-    this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq/(60000*Math.PI*0.032*0.032)];
+    this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq/(Math.PI*0.032*0.032)];
   }
 }
 
