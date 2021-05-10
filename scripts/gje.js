@@ -74,7 +74,12 @@ let clone_matrix = (M) => {
 }
 
 let poiseuille = (radius, length, visc) => {
-  let resistance = 8*visc*length/(Math.PI*Math.pow(radius, 4));
+  let resistance = 8*visc*997*length/(Math.PI*Math.pow(radius, 4));
+  return resistance;
+}
+
+let poiseuille2 = (diam, length, visc) => {
+  let resistance = 128*visc*997*length/(Math.PI*Math.pow(diam, 4));
   return resistance;
 }
 
@@ -113,13 +118,13 @@ let pipe1 = {
     out: {p: 0, q: 0, height: 0, idx: 1},
   },
 
-  res: 6800000,
+  res: 68000000,
   mass: 100,
   dq: 0,
 
   states: {
     default:[
-      [6800000, 0, -1, 1, 0]
+      [68000000, 0, -1, 1, 0]
     ]
   },
 
@@ -147,13 +152,13 @@ let pipe2 = {
     out: {p: 0, q: 0, height: 0, idx: 1},
   },
 
-  res: 3400000,
+  res: 34000000,
   mass: 100,
   dq: 0,
 
   states: {
     default:[
-      [3400000, 0, -1, 1, 0]
+      [34000000, 0, -1, 1, 0]
     ]
   },
 
