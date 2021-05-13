@@ -186,10 +186,11 @@ let branch = {
     out: {p: 0, q: 0, height: 0, idx: 1},
   },
 
-  target: 300000,
+  target: 750000,
+  tol: 10000,
   res_default: 100000000,
-  q_min: 0,
-  q_max: 60000,
+  q_min: 280/60000,
+  q_max: 800/60000,
   res: 100000000,
   mass: 0,
   dq: 0,
@@ -221,10 +222,10 @@ let branch = {
       }
       if (term.q > this.q_min && term.q < this.q_max) {
         let dp = this.terminals.in.p - this.terminals.out.p;
-        if (dp > this.target) {
-          this.res -= 0.01;
-        } else if (dp < this.target) {
-          this.res += 0.01;
+        if (dp > this.target + this.tol) {
+          this.res *= 0.99;
+        } else if (dp < this.target - this.tol) {
+          this.res *= 1.01;
         }
       }
       this.dq = (q_prev - q_prev_prev)/time_step;
