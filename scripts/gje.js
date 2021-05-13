@@ -152,7 +152,7 @@ let pipe2 = {
     out: {p: 0, q: 0, height: 0, idx: 1},
   },
 
-  res: 34000000,
+  res: 3400000,
   mass: 100,
   dq: 0,
 
@@ -179,6 +179,61 @@ let pipe2 = {
   }
 }
 
+
+let branch = {
+  terminals: {
+    in: {p: 0, q: 0, height: 0, idx: 0},
+    out: {p: 0, q: 0, height: 0, idx: 1},
+  },
+
+  target: 300000,
+  res_default: 100000000,
+  q_min: 0,
+  q_max: 60000,
+  res: 100000000,
+  mass: 0,
+  dq: 0,
+  open: 1,
+
+  states: {
+    default:[
+      [100000000, 0, -1, 1, 0]
+    ],
+    off: [
+      [1, 0, 0, 0, 0]
+    ],
+  },
+
+  update: function(time_step = 1/60) {
+    if(this.open > 0) {
+      this.state = 'default';
+      let q_prev = 0;
+      let q_prev_prev = 0;
+      let dp_prev = 0;
+      let term = this.terminals.in;
+      if (term.history) {
+        if (term.history[0]) {
+          q_prev = term.history[0].q;
+        }
+        if (term.history[1]) {
+          q_prev_prev = term.history[1].q;
+        }
+      }
+      if (term.q > this.q_min && term.q < this.q_max) {
+        let dp = this.terminals.in.p - this.terminals.out.p;
+        if (dp > this.target) {
+          this.res -= 0.01;
+        } else if (dp < this.target) {
+          this.res += 0.01;
+        }
+      }
+      this.dq = (q_prev - q_prev_prev)/time_step;
+      this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq];
+    } else {
+      // this.state = 'off';
+    }
+  }
+}
 
 let valve1 = {
   terminals: {
@@ -275,7 +330,7 @@ let pump = {
   },
 
   revs: 0,
-  res: 1000000,
+  res: 100000,
   dP: 0,
   D_impeller: 0.25,
   A: Math.PI*Math.pow(0.032, 2),
@@ -608,6 +663,7 @@ thisNet.add_device(valve1);
 thisNet.add_device(pump);
 thisNet.add_device(valve2);
 thisNet.add_device(pipe2);
+thisNet.add_device(branch);
 thisNet.add_device(atmo);
 // thisNet.add_device(tank);
 thisNet.add_device(atmo2);
@@ -617,7 +673,8 @@ thisNet.create_link(pipe1.terminals.out, valve1.terminals.in);
 thisNet.create_link(valve1.terminals.out, pump.terminals.in);
 thisNet.create_link(pump.terminals.out, valve2.terminals.in);
 thisNet.create_link(valve2.terminals.out, pipe2.terminals.in);
-thisNet.create_link(pipe2.terminals.out, atmo.terminals.value);
+thisNet.create_link(pipe2.terminals.out, branch.terminals.in);
+thisNet.create_link(branch.terminals.out, atmo.terminals.value);
 // thisNet.create_link(atmo.terminals.value, mains.terminals.low);
 
 thisNet.build_nodes();
@@ -638,6 +695,7 @@ let outlet_valve_output = document.getElementById('outlet_valve_value');
 let P_in_display = document.getElementById('P_inlet');
 let P_out_display = document.getElementById('P_outlet');
 let flow_display = document.getElementById('flowrate');
+let branchdp = document.getElementById('branchdp');
 
 RPM_output.innerHTML = RPM_slider.value;
 pump.revs = RPM_slider.value;
@@ -678,6 +736,7 @@ let update = () => {
   }
   P_out_display.innerHTML = `${Math.round(pump.terminals.out.p/1000)} kPa`;
   flow_display.innerHTML = `${Math.round(pump.terminals.in.q*60000)} LPM`;
+  branchdp.innerHTML = `${Math.round((branch.terminals.in.p - branch.terminals.out.p)/1000)} kPa`;
 
   requestAnimationFrame(update);
 }
