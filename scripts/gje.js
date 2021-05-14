@@ -118,13 +118,13 @@ let pipe1 = {
     out: {p: 0, q: 0, height: 0, idx: 1},
   },
 
-  res: 68000000,
+  res: 6800000,
   mass: 100,
   dq: 0,
 
   states: {
     default:[
-      [68000000, 0, -1, 1, 0]
+      [6800000, 0, -1, 1, 0]
     ]
   },
 
@@ -158,7 +158,7 @@ let pipe2 = {
 
   states: {
     default:[
-      [34000000, 0, -1, 1, 0]
+      [3400000, 0, -1, 1, 0]
     ]
   },
 
@@ -674,8 +674,8 @@ thisNet.create_link(pipe1.terminals.out, valve1.terminals.in);
 thisNet.create_link(valve1.terminals.out, pump.terminals.in);
 thisNet.create_link(pump.terminals.out, valve2.terminals.in);
 thisNet.create_link(valve2.terminals.out, pipe2.terminals.in);
-thisNet.create_link(pipe2.terminals.out, branch.terminals.in);
-thisNet.create_link(branch.terminals.out, atmo.terminals.value);
+thisNet.create_link(pipe2.terminals.out, atmo.terminals.value);
+// thisNet.create_link(branch.terminals.out, atmo.terminals.value);
 // thisNet.create_link(atmo.terminals.value, mains.terminals.low);
 
 thisNet.build_nodes();
@@ -696,7 +696,6 @@ let outlet_valve_output = document.getElementById('outlet_valve_value');
 let P_in_display = document.getElementById('P_inlet');
 let P_out_display = document.getElementById('P_outlet');
 let flow_display = document.getElementById('flowrate');
-let branchdp = document.getElementById('branchdp');
 
 RPM_output.innerHTML = RPM_slider.value;
 pump.revs = RPM_slider.value;
@@ -737,7 +736,6 @@ let update = () => {
   }
   P_out_display.innerHTML = `${Math.round(pump.terminals.out.p/1000)} kPa`;
   flow_display.innerHTML = `${Math.round(pump.terminals.in.q*60000)} LPM`;
-  branchdp.innerHTML = `${Math.round((branch.terminals.in.p - branch.terminals.out.p)/1000)} kPa`;
 
   requestAnimationFrame(update);
 }
