@@ -83,7 +83,6 @@ let poiseuille2 = (diam, length, visc) => {
   return resistance;
 }
 
-console.log(poiseuille(0.032, 30, 8.9e-4));
 
 let tank = {
   terminals: {
@@ -112,72 +111,10 @@ let tank = {
 }
 
 
-let pipe1 = {
-  terminals: {
-    in: {p: 0, q: 0, height: 0, idx:0},
-    out: {p: 0, q: 0, height: 0, idx: 1},
-  },
+let pipe1 = new Pipe(0.064, 15);
+let pipe2 = new Pipe(0.064, 15);
 
-  res: 6800000,
-  mass: 100,
-  dq: 0,
 
-  states: {
-    default:[
-      [6800000, 0, -1, 1, 0]
-    ]
-  },
-
-  update: function(time_step = 1/60) {
-    let q_prev = 0;
-    let q_prev_prev = 0;
-    let term = this.terminals.in;
-    if (term.history) {
-      if (term.history[0]) {
-        q_prev = term.history[0].q;
-      }
-      if (term.history[1]) {
-        q_prev_prev = term.history[1].q;
-      }
-    }
-    this.dq = (q_prev - q_prev_prev)/time_step;
-    this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq/(Math.PI*0.032*0.032)];
-  }
-
-}
-
-let pipe2 = {
-  terminals: {
-    in: {p: 0, q: 0, height: 0, idx: 0},
-    out: {p: 0, q: 0, height: 0, idx: 1},
-  },
-
-  res: 3400000,
-  mass: 100,
-  dq: 0,
-
-  states: {
-    default:[
-      [3400000, 0, -1, 1, 0]
-    ]
-  },
-
-  update: function(time_step = 1/60) {
-    let q_prev = 0;
-    let q_prev_prev = 0;
-    let term = this.terminals.in;
-    if (term.history) {
-      if (term.history[0]) {
-        q_prev = term.history[0].q;
-      }
-      if (term.history[1]) {
-        q_prev_prev = term.history[1].q;
-      }
-    }
-    this.dq = (q_prev - q_prev_prev)/time_step;
-    this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq/(Math.PI*0.032*0.032)];
-  }
-}
 
 
 let branch = {
@@ -236,166 +173,16 @@ let branch = {
   }
 }
 
-let valve1 = {
-  terminals: {
-    in: {p: 0, q: 0, height: 0, idx: 0},
-    out: {p: 0, q: 0, height: 0, idx: 1},
-  },
+let valve1 = new Valve(0.064, 0.15);
+let valve2 = new Valve(0.064, 0.15);
 
-  open: 0,
-  res_default: 100000,
-  res: 0,
-  mass: 0,
-  dq: 0,
+let pump = new Pump(0.150, 1.5, 0.30);
 
-  states: {
-    default:[
-      [0, 0, -1, 1, 0]
-    ],
-    off: [
-      [1, 0, 0, 0, 0]
-    ],
-  },
+let mains0 = new P_diff(400000);
 
-  update: function(time_step = 1/60) {
-    if(this.open > 0) {
-      this.state = 'default';
-      this.res = this.res_default/Math.pow(this.open, 2);
-      let q_prev = 0;
-      let q_prev_prev = 0;
-      let term = this.terminals.in;
-      if (term.history) {
-        if (term.history[0]) {
-          q_prev = term.history[0].q;
-        }
-        if (term.history[1]) {
-          q_prev_prev = term.history[1].q;
-        }
-      }
-      this.dq = (q_prev - q_prev_prev)/time_step;
-      this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq];
-    } else {
-      this.state = 'off';
-    }
-  }
-}
+let atmo = new P_value(100000);
+let mains = new P_value(600000);
 
-let valve2 = {
-  terminals: {
-    in: {p: 0, q: 0, height: 0, idx: 0},
-    out: {p: 0, q: 0, height: 0, idx: 1},
-  },
-
-  open: 0,
-  res_default: 100000,
-  res: 0,
-  mass: 0,
-  dq: 0,
-
-  states: {
-    default:[
-      [0, 0, -1, 1, 0]
-    ],
-    off: [
-      [1, 0, 0, 0, 0]
-    ],
-  },
-
-  update: function(time_step = 1/60) {
-    if(this.open > 0) {
-      this.state = 'default';
-      this.res = this.res_default/Math.pow(this.open, 2);
-      let q_prev = 0;
-      let q_prev_prev = 0;
-      let term = this.terminals.in;
-      if (term.history) {
-        if (term.history[0]) {
-          q_prev = term.history[0].q;
-        }
-        if (term.history[1]) {
-          q_prev_prev = term.history[1].q;
-        }
-      }
-      this.dq = (q_prev - q_prev_prev)/time_step;
-      this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq];
-    } else {
-      this.state = 'off';
-    }
-  }
-}
-
-let pump = {
-  terminals: {
-    in: {p: 0, q: 0, height: 0, idx: 0},
-    out: {p: 0, q: 0, height: 0, idx: 1},
-  },
-
-  revs: 0,
-  res: 100000,
-  dP: 0,
-  D_impeller: 0.25,
-  A: Math.PI*Math.pow(0.032, 2),
-
-
-  states: {
-    default:[
-      [1000000, 0, -1, 1, 0]
-    ],
-    cav: [
-      [0, 0, -1, 1, 0]
-    ],
-  },
-
-  update: function(g = 9.81, rho = 997) {
-    this.state = 'default';
-    let q_prev = 0;
-    if (this.terminals.in.history) {
-      if (this.terminals.in.history[0]) {
-        q_prev = this.terminals.in.history[0].q;
-      }
-    }
-    this.dP = 0.00014*g*rho*Math.pow(this.D_impeller*this.revs,2) - 0.5*rho*Math.pow((1/60000)*q_prev/this.A,2); //this one assumes q_prev in LPM
-    if (this.terminals.in.p < 3000) {
-      // this.dP *= 0.3;
-      this.revs *= 0.9;
-    }
-    this.states.default[0] = [this.res, 0, -1, 1, this.dP];
-  }
-}
-
-let mains = {
-  terminals: {
-    low: {p: 0, q: 0, height: 0, idx: 0},
-    high: {p: 0, q: 0, height: 0, idx: 1},
-  },
-  states: {
-    default:[
-      [0, 0, -1, 1, 400000]
-    ]
-  },
-}
-
-let atmo = {
-  terminals: {
-    value: {p: 0, q: 0, height: 0, idx: 0},
-  },
-  states: {
-    default:[
-      [0, 1, 100000]
-    ]
-  },
-}
-
-let atmo2 = {
-  terminals: {
-    value: {p: 0, q: 0, height: 0, idx: 0},
-  },
-  states: {
-    default:[
-      [0, 1, 500000]
-    ]
-  },
-}
 
 
 let thisNet = {
@@ -667,8 +454,8 @@ thisNet.add_device(pipe2);
 thisNet.add_device(branch);
 thisNet.add_device(atmo);
 // thisNet.add_device(tank);
-thisNet.add_device(atmo2);
-thisNet.create_link(atmo2.terminals.value, pipe1.terminals.in);
+thisNet.add_device(mains);
+thisNet.create_link(mains.terminals.value, pipe1.terminals.in);
 // thisNet.create_link(tank.terminals.out, pipe1.terminals.in);
 thisNet.create_link(pipe1.terminals.out, valve1.terminals.in);
 thisNet.create_link(valve1.terminals.out, pump.terminals.in);
