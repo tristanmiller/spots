@@ -1,4 +1,4 @@
-let Pipe = function(diam, length, rho = 997) {
+let Pipe = function(diam, length, rho = 997, p_fill = 100000) {
   this.diam = diam;
   this.area = Math.PI*Math.pow(0.5*diam, 2);
   this.length = length;
@@ -8,14 +8,17 @@ let Pipe = function(diam, length, rho = 997) {
   this.dq = 0;
 
   this.terminals = {
-      in: {p: 0, q: 0, height: 0, idx:0},
-      out: {p: 0, q: 0, height: 0, idx: 1},
+      in: {p: p_fill, q: 0, height: 0, idx:0},
+      out: {p: p_fill, q: 0, height: 0, idx: 1},
   };
 
   this.states = {
     default:[
         [this.res, 0, -1, 1, -1*this.mass*this.dq/this.area]
       ],
+    static:[
+        [0, 0, 1, 0, (this.terminals.in.p + this.terminals.out.p)/2]
+    ]
     }
 }
 
@@ -38,4 +41,14 @@ Pipe.prototype.update = function(time_step = 1/60)  {
   }
   this.dq = (q_prev - q_prev_prev)/time_step;
   this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq/this.area];
+  this.states.static[0] = [0, 0, -1, 1, (this.terminals.in.history[0].p + this.terminals.out.history[0].p)];
+  // if(term.q == 0) {
+  //   if(this.state != 'static') {
+  //     this.state = 'static';
+  //   }
+  // } else {
+  //   if (this.state != 'default') {
+  //     this.state = 'default';
+  //   }
+  // }
 }

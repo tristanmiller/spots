@@ -112,7 +112,7 @@ let tank = {
 
 
 let pipe1 = new Pipe(0.064, 15);
-let pipe2 = new Pipe(0.064, 15);
+let pipe2 = new Pipe(0.025, 15);
 
 
 
