@@ -5,7 +5,9 @@ let Pipe = function(diam, length, rho = 997, p_fill = 100000) {
   this.volume = this.length*this.area;
   this.mass = this.volume*rho;
   this.res = this.poiseuille();
+  this.res_default = this.res;
   this.dq = 0;
+  this.cap = 1e-15;
 
   this.terminals = {
       in: {p: p_fill, q: 0, height: 0, idx:0},
@@ -40,6 +42,18 @@ Pipe.prototype.update = function(time_step = 1/60)  {
     }
   }
   this.dq = (q_prev - q_prev_prev)/time_step;
+  let dp_prev = 0;
+  if (term.history) {
+    let p_in_prev = term.history[0].p;
+    let p_out_prev = this.terminals.out.history[0].p;
+    dp_prev = p_in_prev - p_out_prev;
+  }
+
+  //need to add a state to represent a collapsed hose, e.g. if internal pressure < atmospheric
+  //in this state, the hose acts like a closing valve - resistance goes up, delta p increases
+  //but when a certain delta p is achieved, the hose suddenly reinflates until this surge dissipates
+  //then back to the condition that began the problem.
+  // this.states.default[0] = [(time_step*this.res)/(this.res*this.cap + time_step), 0, -1, 1, dp_prev*(this.res*this.cap)/(this.res*this.cap + time_step) - this.mass*this.dq/this.area];
   this.states.default[0] = [this.res, 0, -1, 1, -1*this.mass*this.dq/this.area];
   this.states.static[0] = [0, 0, -1, 1, (this.terminals.in.history[0].p + this.terminals.out.history[0].p)];
   // if(term.q == 0) {
