@@ -1,5 +1,6 @@
 let Valve = function (diam, length, rho = 997) {
   Pipe.call(this, diam, length, rho);
+  this.res *= 0.01;
   this.res_default = this.res;
   this.open = 0;
   this.cap = 1e-15;
