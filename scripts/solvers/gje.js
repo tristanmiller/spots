@@ -508,6 +508,8 @@ outlet_valve_slider.oninput = function() {
   valve2.open = this.value/100;
 }
 
+let compound_pointer = document.getElementById("pointer");
+console.log(compound_pointer);
 
 
 let update = () => {
