@@ -508,8 +508,8 @@ outlet_valve_slider.oninput = function() {
   valve2.open = this.value/100;
 }
 
-let compound_pointer = document.getElementById("pointer");
-console.log(compound_pointer);
+let pointer = document.getElementById("pointer_needle");
+console.log(pointer);
 
 
 let update = () => {
@@ -526,6 +526,18 @@ let update = () => {
   P_out_display.innerHTML = `${Math.round(pump.terminals.out.p/1000)} kPa`;
   flow_display.innerHTML = `${Math.round(pump.terminals.in.q*60000)} LPM`;
 
+  let pointer_angle = 0;
+  let pointer_p = pump.terminals.in.p - 100000;
+  if(pointer_p < 0) {
+    //map pressure range to degrees
+    pointer_angle = (pointer_p/100000)*120;
+    if (pointer_angle < -140) {pointer_angle = -140};
+  } else {
+    pointer_angle = (pointer_p/2500000)*120;
+    if (pointer_angle > 160) {pointer_angle = 160};
+
+  }
+  pointer.style.transform = `rotateZ(${pointer_angle}deg)`;
   requestAnimationFrame(update);
 }
 

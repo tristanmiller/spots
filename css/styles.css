@@ -46,10 +46,14 @@
 	align-items:flex-end;
 }
 
-#pointer {
+.gauges svg {
+	height:30%;
+}
+
+#pointer_needle {
 	transform-box: fill-box;
-	transform-origin: 50% 70%;
-	transform: rotate(0deg);
+	transform-origin: 50% 69.75%;
+	transform: rotateZ(0deg);
 }
 
 .update-content {
