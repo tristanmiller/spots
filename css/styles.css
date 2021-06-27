@@ -47,10 +47,9 @@
 }
 
 .gauges svg {
-	height:30%;
 }
 
-#pointer_needle {
+#pointer_needle, #pointer_needle_main {
 	transform-box: fill-box;
 	transform-origin: 50% 69.75%;
 	transform: rotateZ(0deg);

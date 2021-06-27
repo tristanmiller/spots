@@ -509,7 +509,7 @@ outlet_valve_slider.oninput = function() {
 }
 
 let pointer = document.getElementById("pointer_needle");
-console.log(pointer);
+let pointer_main = document.getElementById("pointer_needle_main");
 
 
 let update = () => {
@@ -528,6 +528,7 @@ let update = () => {
 
   let pointer_angle = 0;
   let pointer_p = pump.terminals.in.p - 100000;
+  let pointer_main_p = pump.terminals.out.p - 100000;
   if(pointer_p < 0) {
     //map pressure range to degrees
     pointer_angle = (pointer_p/100000)*120;
@@ -537,7 +538,12 @@ let update = () => {
     if (pointer_angle > 160) {pointer_angle = 160};
 
   }
+
+  let pointer_main_angle = (pointer_main_p/2500000)*240 - 120;
+      if (pointer_main_angle > 250) {pointer_main_angle = 250};
   pointer.style.transform = `rotateZ(${pointer_angle}deg)`;
+  pointer_main.style.transform = `rotateZ(${pointer_main_angle}deg)`;
+
   requestAnimationFrame(update);
 }
 
