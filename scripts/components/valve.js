@@ -3,7 +3,7 @@ let Valve = function (diam, length, rho = 997) {
   this.res *= 0.01;
   this.res_default = this.res;
   this.open = 0;
-  this.cap = 1e-15;
+  this.cap = 1e-10;
   this.states = {
       default:[
         [this.res, 0, -1, 1, -1*this.mass*this.dq/this.area]
@@ -13,6 +13,8 @@ let Valve = function (diam, length, rho = 997) {
       ],
     };
   this.state = 'off';
+  this.factor = 10000;
+  this.threshold = 0.00001;
 }
 
 Valve.prototype = Object.create(Pipe.prototype);
@@ -27,7 +29,11 @@ Valve.prototype.update = function(time_step = 1/60)  {
       this.state = 'off';
     }
   }
-  this.res = this.res_default/Math.pow(this.open,4);
+  if (this.open < this.threshold && this.open > 0) {
+    this.res = this.threshold*this.factor*this.res_default/this.open;
+  } else if (this.open >= this.threshold) {
+    this.res = (-this.factor*this.res_default/(1 - this.threshold))*this.open + (1 + this.factor/(1 - this.threshold))*this.res_default;
+  }
   let q_prev = 0;
   let q_prev_prev = 0;
   let term = this.terminals.in;

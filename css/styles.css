@@ -47,6 +47,12 @@
 }
 
 .gauges svg {
+	width: 150px;
+	height: 150px;
+}
+
+.controls input {
+	width: 300px;
 }
 
 #pointer_needle, #pointer_needle_main {
