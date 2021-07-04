@@ -10,8 +10,8 @@ let Pipe = function(diam, length, rho = 997, p_fill = 100000) {
   this.cap = this.length*1e-10;
 
   this.terminals = {
-      in: {p: p_fill, q: 0, height: 0, idx:0},
-      out: {p: p_fill, q: 0, height: 0, idx: 1},
+      in: {p: p_fill, q: 0, height: 0, idx:0, device: this},
+      out: {p: p_fill, q: 0, height: 0, idx: 1, device: this},
   };
 
   this.states = {
@@ -53,18 +53,18 @@ Pipe.prototype.update = function(time_step = 1/60)  {
   //in this state, the hose acts like a closing valve - resistance goes up, delta p increases
   //but when a certain delta p is achieved, the hose suddenly reinflates until this surge dissipates
   //then back to the condition that began the problem.
-  if (term.p < 100000 || this.terminals.out.p < 100000) {
-    if(this.res < 100*this.res_default) {
-      this.res = this.res * 1.01;
-    } else {
-      this.res = this.res * 0.90;
-      if (this.res < this.res_default) {this.res = this.res_default;}
-    }
-  } else {
-    this.res = this.res_default;
-  }
+  // if (term.p < 100000 || this.terminals.out.p < 100000) {
+  //   if(this.res < 100*this.res_default) {
+  //     this.res = this.res * 1.01;
+  //   } else {
+  //     this.res = this.res * 0.90;
+  //     if (this.res < this.res_default) {this.res = this.res_default;}
+  //   }
+  // } else {
+  //   this.res = this.res_default;
+  // }
   // this.states.default[0] = [(time_step*this.res)/(this.res*this.cap + time_step), 0, -1, 1, dp_prev*(this.res*this.cap)/(this.res*this.cap + time_step) - this.mass*this.dq/this.area];
-  this.states.default[0] = [this.res, 0, -1, 1, dp_prev*(this.res*this.cap)/(this.res*this.cap + time_step) - 10*this.mass*this.dq/this.area];
+  this.states.default[0] = [this.res, 0, -1, 1, dp_prev*(this.res*this.cap)/(this.res*this.cap + time_step) - this.mass*this.dq/this.area];
   this.states.static[0] = [0, 0, -1, 1, (this.terminals.in.history[0].p + this.terminals.out.history[0].p)];
   // if(term.q == 0) {
   //   if(this.state != 'static') {

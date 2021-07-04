@@ -14,7 +14,7 @@ let Valve = function (diam, length, rho = 997) {
     };
   this.state = 'off';
   this.factor = 10000;
-  this.threshold = 0.00001;
+  this.threshold = 0.1;
 }
 
 Valve.prototype = Object.create(Pipe.prototype);
