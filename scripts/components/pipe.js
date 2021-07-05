@@ -29,7 +29,8 @@ Pipe.prototype.poiseuille = function(radius = this.diam/2, length = this.length,
   return resistance;
 }
 
-Pipe.prototype.update = function(time_step = 1/60)  {
+Pipe.prototype.update = function(time_step = 1/60, rho = 997, g = 9.81)  {
+  let dh = this.terminals.in.height - this.terminals.out.height;
   let q_prev = 0;
   let q_prev_prev = 0;
   let term = this.terminals.in;
@@ -64,7 +65,7 @@ Pipe.prototype.update = function(time_step = 1/60)  {
   //   this.res = this.res_default;
   // }
   // this.states.default[0] = [(time_step*this.res)/(this.res*this.cap + time_step), 0, -1, 1, dp_prev*(this.res*this.cap)/(this.res*this.cap + time_step) - this.mass*this.dq/this.area];
-  this.states.default[0] = [this.res, 0, -1, 1, dp_prev*(this.res*this.cap)/(this.res*this.cap + time_step) - this.mass*this.dq/this.area];
+  this.states.default[0] = [this.res, 0, -1, 1, dp_prev*(this.res*this.cap)/(this.res*this.cap + time_step) - this.mass*this.dq/this.area + rho*g*dh];
   this.states.static[0] = [0, 0, -1, 1, (this.terminals.in.history[0].p + this.terminals.out.history[0].p)];
   // if(term.q == 0) {
   //   if(this.state != 'static') {

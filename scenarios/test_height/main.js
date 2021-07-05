@@ -27,10 +27,36 @@ let tank = {
 
 }
 
+let Tank2 = function () {
+  this.terminals = {
+    value: {p: 0, q: 0, height: 0, idx: 0, device: this},
+  };
+  this.height = 1.5;
+  this.cap = 3000;
+  this.stored = 500;
+  this.states = {
+    default:[
+      [0, 1, 100000 + this.height*997*9.81]
+    ],
+    empty:[
+      [1, 0, 0]
+    ]
+  };
+  this.update = function(time_step = 1/60) {
+    let outflow = this.terminals.value.q*time_step;
+    this.stored += outflow*1000;
+    if(this.stored <= 0) {
+      this.stored = 0;
+      this.state = 'empty';
+    } else {
+      this.state = 'default';
+    }
+    this.height = this.stored/2000;
+    this.states.default[0] = [0, 1, 100000 + this.height*997*9.81];
+    // console.log(this.stored);
+  }
 
-let pipe1 = new Pipe(0.064, 15);
-let pipe2 = new Pipe(0.064, 30);
-
+}
 
 
 
@@ -91,7 +117,14 @@ let branch = {
   }
 }
 
-let valve1 = new Valve(0.064, 0.15);
+let pipe1 = new Pipe(0.150, 1);
+let pipe2 = new Pipe(0.064, 15);
+pipe2.terminals.out.height = 0;
+pipe1.terminals.in.height = 1.5;
+
+console.log(pipe2);
+
+let valve1 = new Valve(0.150, 0.15);
 let valve2 = new Valve(0.064, 0.15);
 
 let pump = new Pump(0.150, 1.5, 0.30);
@@ -99,12 +132,13 @@ let pump = new Pump(0.150, 1.5, 0.30);
 let mains0 = new P_diff(400000);
 
 let atmo = new P_value(100000);
-let mains = new P_value(600000);
+let mains = new P_value(100000);
 
+let tank2 = new Tank2();
 
 
 let thisNet = new Network;
-// thisNet.add_device(mains);
+thisNet.add_device(mains);
 thisNet.add_device(pipe1);
 thisNet.add_device(valve1);
 thisNet.add_device(pump);
@@ -112,9 +146,11 @@ thisNet.add_device(valve2);
 thisNet.add_device(pipe2);
 thisNet.add_device(branch);
 thisNet.add_device(atmo);
-// thisNet.add_device(tank);
-thisNet.add_device(mains);
-thisNet.create_link(mains.terminals.value, pipe1.terminals.in);
+thisNet.add_device(tank2);
+// thisNet.add_device(mains);
+thisNet.create_link(tank2.terminals.value, pipe1.terminals.in);
+// thisNet.create_link(tank.terminals.in, mains.terminals.value);
+
 // thisNet.create_link(tank.terminals.out, pipe1.terminals.in);
 thisNet.create_link(pipe1.terminals.out, valve1.terminals.in);
 thisNet.create_link(valve1.terminals.out, pump.terminals.in);

@@ -102,6 +102,8 @@ Network.prototype.set_heights = function() {
   ///apply this nodeheight to the other terminal's term.height_abs
   ///somehow get the devices that the terminals belong to, and using the other terminals' relative heights, give them absolute heights.
   /// do this at component initialisation. then it's just term.device and we can see what the other terminals are like.
+
+  ///simplest thing to do is to just specify the heights of the terminals manually, this offers greater flexibility anyway.
 }
 
 Network.prototype.build_matrix = function() {
