@@ -91,7 +91,7 @@ Network.prototype.build_nodes = function() {
   }
 };
 
-Network.prototype.set_heights: function() {
+Network.prototype.set_heights = function() {
   //visit each node
   //visit each terminal in the node
   //if it's the first node, on the first terminal...
@@ -104,7 +104,7 @@ Network.prototype.set_heights: function() {
   /// do this at component initialisation. then it's just term.device and we can see what the other terminals are like.
 }
 
-Network.prototype.build_matrix: function() {
+Network.prototype.build_matrix = function() {
   this.matrix = [];
   //initialise matrix of just the right size. Should be T x (T + 1), T = terminals.length
   for (let i = 0, l = this.links.length + this.nodes.length; i < l; i++) {
