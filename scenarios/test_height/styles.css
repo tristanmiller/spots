@@ -70,6 +70,21 @@
 	transform: rotateZ(0deg);
 }
 
+#tank_fill {
+	transform-box: fill-box;
+	transform-origin: 50% 100%;
+}
+
+#tank_stored tspan {
+	text-align: right;
+}
+
+#pipe_deliv {
+	fill: url(#Gradient1);
+}
+
+
+
 .update-content {
 	margin: auto;
 	font-size:1.15rem;

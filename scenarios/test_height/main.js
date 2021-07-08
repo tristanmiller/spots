@@ -1,4 +1,10 @@
 
+let map_p5 = function (value, oldMin, oldMax, newMin, newMax) {
+  let prop = (value - oldMin)/(oldMax - oldMin);
+  let newVal = prop*(newMax - newMin) + newMin;
+  return newVal;
+}
+
 
 
 let tank = {
@@ -33,7 +39,7 @@ let Tank2 = function () {
   };
   this.height = 1.5;
   this.cap = 3000;
-  this.stored = 500;
+  this.stored = 3000;
   this.states = {
     default:[
       [0, 1, 100000 + this.height*997*9.81]
@@ -203,8 +209,14 @@ outlet_valve_slider.oninput = function() {
   valve2.open = this.value/100;
 }
 
+//svg elements we want to modify
 let pointer = document.getElementById("pointer_needle");
 let pointer_main = document.getElementById("pointer_needle_main");
+let t_stored = document.getElementById('tank_stored').getElementsByTagName('tspan')[0];
+let t_fill = document.getElementById('tank_fill');
+let stop1 = document.getElementsByClassName('stop1')[0];
+let stop2 = document.getElementsByClassName('stop2')[0];
+console.log(stop1.style);
 
 
 let update = () => {
@@ -239,7 +251,13 @@ let update = () => {
   pointer.style.transform = `rotateZ(${pointer_angle}deg)`;
   pointer_main.style.transform = `rotateZ(${pointer_main_angle}deg)`;
 
+  t_stored.textContent = Math.round(tank2.stored);
   requestAnimationFrame(update);
+  t_fill.style.transform = `scaleY(${tank2.stored/tank2.cap})`;
+  let thisColor = Math.round(map_p5(valve2.terminals.out.p, 100000, 2500000, 0, 255));
+  stop1.setAttribute('stop-color', `rgb(0, ${thisColor}, ${thisColor})`);
+  // stop1.setAttribute('stop-color', `red`);
+
 }
 
 update();
