@@ -30,6 +30,11 @@
 	width: 100%;
 }
 
+.diagram svg {
+	width: 300px;
+	height: 300px;
+}
+
 .sink {
 	border: 2px solid red;
 }
