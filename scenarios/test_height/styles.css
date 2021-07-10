@@ -52,7 +52,7 @@
 }
 
 .gauges {
-	display: none;
+	/* display: none; */
 }
 
 .gauges svg {
