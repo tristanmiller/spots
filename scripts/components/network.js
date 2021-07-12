@@ -87,6 +87,10 @@ Network.prototype.build_nodes = function() {
         }
       }
       this.nodes.push(newNode);
+      for (let t in newNode) {
+        let term = newNode[t];
+        term.node = newNode;
+      }
     }
   }
 };
