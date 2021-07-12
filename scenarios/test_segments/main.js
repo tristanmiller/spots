@@ -138,8 +138,8 @@ let mains = new P_value(600000);
 
 
 let thisNet = new Network;
-// thisNet.add_device(mains);
-// thisNet.add_device(atmo);
+thisNet.add_device(mains);
+thisNet.add_device(atmo);
 thisNet.add_device(pipe1a);
 thisNet.add_device(pipe1b);
 thisNet.add_device(pipe1c);
@@ -149,13 +149,13 @@ thisNet.add_device(pipe3a);
 thisNet.add_device(pipe3b);
 
 
-// thisNet.create_link(mains.terminals.value, pipe1a.terminals.in);
-// thisNet.create_link(mains.terminals.value, pipe2a.terminals.in);
-// thisNet.create_link(mains.terminals.value, pipe3a.terminals.in);
-//
-// thisNet.create_link(pipe1c.terminals.out, atmo.terminals.value);
-// thisNet.create_link(pipe2b.terminals.out, atmo.terminals.value);
-// thisNet.create_link(pipe3b.terminals.out, atmo.terminals.value);
+thisNet.create_link(mains.terminals.value, pipe1a.terminals.in);
+thisNet.create_link(mains.terminals.value, pipe2a.terminals.in);
+thisNet.create_link(mains.terminals.value, pipe3a.terminals.in);
+
+thisNet.create_link(pipe1c.terminals.out, atmo.terminals.value);
+thisNet.create_link(pipe2b.terminals.out, atmo.terminals.value);
+thisNet.create_link(pipe3b.terminals.out, atmo.terminals.value);
 
 
 // thisNet.create_link(pipe1a.terminals.in, pipe2a.terminals.in);
@@ -164,8 +164,8 @@ thisNet.add_device(pipe3b);
 // thisNet.create_link(pipe1c.terminals.out, pipe3b.terminals.out);
 
 
-thisNet.create_link(pipe1a.terminals.in, pipe2b.terminals.out);
-thisNet.create_link(pipe2a.terminals.in, pipe1c.terminals.out);
+// thisNet.create_link(pipe1a.terminals.in, pipe2b.terminals.out);
+// thisNet.create_link(pipe2a.terminals.in, pipe1c.terminals.out);
 
 
 thisNet.create_link(pipe1a.terminals.out, pipe1b.terminals.in);
