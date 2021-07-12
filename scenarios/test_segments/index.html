@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>SPOTS SegmentMap Test</title>
+	<meta http-equiv="Content-Type" content="text/html"; charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="theme-color" content="#EE0000">
+	<meta name="Description" content="About: A pump operation simulation, with simplified physics, Author:Tristan Miller">
+	<link rel="manifest" href="manifest.json" />
+	<link rel="stylesheet" type="text/css" href="styles.css"/>
+</head>
+
+<body>
+	<!-- <script type="text/javascript" src="scripts/swHandling.js"></script> -->
+
+
+	<div onclick="void(0);">
+
+		<div class="viewport">
+			<div class="diagram">
+				<h2>Testing segment mapping</h2>
+
+			</div>
+			<div class="stats">
+				<div class="gauges">
+
+
+
+
+				</div>
+
+			</div>
+			<div class="controls">
+
+			</div>
+
+
+		</div>
+		</div>
+		<div class="update">
+			<div class="update-content">
+				<p>New version available!</p>
+				<div class="button-container">
+				<button id="updateBtn">INSTALL</button>
+				<button onclick="toggleDisplay(document.getElementsByClassName('update')[0])">DISMISS</button>
+			</div>
+		</div>
+	</div>
+	</div>
+	<!-- try to load these in script, embedded in promise -->
+	<!-- <script type="text/javascript" src="scripts/physics.js"></script> -->
+	<script type="text/javascript" src="../../scripts/solvers/gje.js"></script>
+	<script type="text/javascript" src="../../scripts/components/network.js"></script>
+	<script type="text/javascript" src="../../scripts/multiphase.js"></script>
+	<script type="text/javascript" src="../../scripts/components/pipe.js"></script>
+	<script type="text/javascript" src="../../scripts/components/valve.js"></script>
+	<script type="text/javascript" src="../../scripts/components/pump.js"></script>
+	<script type="text/javascript" src="../../scripts/components/p_value.js"></script>
+	<script type="text/javascript" src="../../scripts/components/p_diff.js"></script>
+	<script type="text/javascript" src="main.js"></script>
+
+</body>
+</html>

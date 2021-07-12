@@ -169,6 +169,7 @@ thisNet.create_link(pipe2.terminals.out, atmo.terminals.value);
 thisNet.build_nodes();
 thisNet.build_matrix();
 
+buildSegmentMap(thisNet);
 
 
 
@@ -252,12 +253,12 @@ let update = () => {
   pointer_main.style.transform = `rotateZ(${pointer_main_angle}deg)`;
 
   t_stored.textContent = Math.round(tank2.stored);
-  requestAnimationFrame(update);
   t_fill.style.transform = `scaleY(${tank2.stored/tank2.cap})`;
   let thisColor = Math.round(map_p5(valve2.terminals.out.p, 100000, 2500000, 0, 255));
   stop1.setAttribute('stop-color', `rgb(0, ${thisColor}, ${thisColor})`);
   // stop1.setAttribute('stop-color', `red`);
 
+  requestAnimationFrame(update);
 }
 
 update();

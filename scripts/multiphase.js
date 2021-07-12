@@ -26,6 +26,7 @@ let Segment = function() {
 }
 
 Segment.prototype.addDevice = function(device, terminal) {
+  device.segment = this;
   this.devices.push(device);
   if(device.volume) {
     this.volume += device.volume;
@@ -33,6 +34,34 @@ Segment.prototype.addDevice = function(device, terminal) {
   //things to do if this is the first device in the Segment
   if(this.devices.length == 1) {
     this.terminals.start = terminal;
+  }
+
+  //work out if there is another device to add
+  //go to the other terminal of this device.
+  let otherTerminal;
+  for (let t in device.terminals) {
+    if (device.terminals[t] != terminal) {
+      otherTerminal = device.terminals[t];
+    }
+  }
+  let node = otherTerminal.node;
+  if (node.length == 2) {
+    //it's possible this can be continued, if the next device has two terminals, and isn't this device.
+    //first, get the terminal that isn't part of this device (if it exists)
+    for (let i = 0, l = node.length; i < l; i++) {
+      if (node[i] != otherTerminal) {
+        let nextDevice = node[i].device;
+        if (Object.keys(nextDevice.terminals).length == 2 && !nextDevice.segment) {
+          let nextTerm = node[i];
+          this.addDevice(nextDevice, nextTerm);
+        }
+      }
+    }
+  }
+
+  //if we have ended up here, it's time to end the segment.
+  if (!this.terminals.end) {
+    this.terminals.end = otherTerminal;
   }
 }
 
@@ -43,38 +72,44 @@ let buildSegmentMap = function(network) {
   //look for a 'source'
   for (let d in devices) {
     //is d a P_value?
-    if(d instanceof P_value) {
+    if(devices[d] instanceof P_value || Object.keys(devices[d].terminals).length == 1) {
     //find the Node it is connected to
-      let term = d.terminals.value;
+      let term = devices[d].terminals.value;
       let node = term.node;
       //for each other terminal in the node, attempt to start a new segment
-      for (let t in node) {
-        if(node[t] != term) {
-          //attempt to start a new segment
-          let thisDevice = node[t].device;
-          if(!thisDevice.segment) {
-            //do a thing. in this case, doing a thing is: adding a new segment to the network. adding d to this segment.
-            let s = new Segment()
-            addNewSegment(segments, s);
-            s.addDevice(thisDevice, node[t]);
-            //then work out whether to add another device to this Segment, or to close it off here.
-            //the reasons to close off are: it's a device with 3+ terminals, the next device is a device with 3+ terminals, or is a P_value
-            // or...the next NODE has more than two terminals in it.
-          }
-        }
-      }
+      beginNewSegments(segments, node);
     }
   }
   //look for a node with more than 2 terminals, then pick one device from that node
   let nodes = network.nodes;
   for (let n in nodes) {
-    if(nodes[n].terminals > 2) {
+    if(nodes[n].length > 2) {
+      let node = nodes[n];
       //investigate further - pick a device and do the thing
+      beginNewSegments(segments, node);
     }
   }
   //start on any node
   for (let n in nodes) {
     //investigate each device connected to the node. Is it already part of a Segment?
+    let node = nodes[n];
+    beginNewSegments(segments, node);
+  }
+  console.log(segments);
+}
+
+let beginNewSegments = function(segmentMap, node) {
+  for (let i = 0, l = node.length; i < l; i++) {
+    let terminal = node[i];
+    if (!terminal.device.segment && !(terminal.device instanceof P_value) && Object.keys(terminal.device.terminals).length != 1) {
+      let s = new Segment();
+      addNewSegment(segmentMap, s);
+      s.addDevice(terminal.device, terminal);
+      if (s.terminals.end) {
+        let endNode = s.terminals.end.node;
+        beginNewSegments(segmentMap, endNode);
+      }
+    }
   }
 }
 
