@@ -118,3 +118,16 @@ let addNewSegment = function(segmentMap, segment) {
     segmentMap.push(segment);
     segment.id = segmentMap.length - 1;
 }
+
+
+let Blob = function (fluid, volume) {
+  this.fluid = fluid;
+  this.volume = volume;
+}
+
+
+let Fluid = function (name = 'Mystery Fluid', rho = 997, visc = 8.9e-4) {
+  this.name = name;
+
+
+}
