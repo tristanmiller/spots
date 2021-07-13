@@ -65,6 +65,69 @@ Segment.prototype.addDevice = function(device, terminal) {
   }
 }
 
+//build an array of the blobs to be exported from the Segment
+//at the same time, should be removing material from the Segment's blobs array.
+Segment.prototype.buildOutflowSequence = function(time_step = 1/60) {
+  //determine the outflowing terminal of the Segment
+  let outflowSequence = [];
+  let outflowTerminal = this.terminals.end;
+  if (outflowTerminal.q > 0) {
+    outflowTerminal = this.terminals.start;
+  }
+
+  let blobSequence = this.blobs.slice();
+  if (outflowTerminal == this.terminals.start) {
+    blobSequence.reverse();
+  }
+
+  let outflowVolume = -1*outflowTerminal.q*time_step;
+  //now investigate the blob sequence and progressively drain the blobs into
+  //outflowSequence until the outflowVolume is accounted for
+  for (let i = 0, l = blobSequence.length; i < l; i++) {
+    let thisBlob = blobSequence[i];
+    let newBlob = Object.assign({}, thisBlob);
+    if (newBlob.volume >= outflowVolume) {
+      newBlob.volume = outflowVolume;
+      thisBlob.volume -= outflowVolume
+    } else {
+      delete blobSequence[i];
+    }
+    outflowSequence.push(newBlob);
+    outflowVolume -= newBlob.volume;
+    if(outflowVolume == 0) {
+      break;
+    }
+  }
+  //now have to transport the remaining blobs to the end of the Segment.
+  //note this could also just be handled in the 'distribute to Segments stage' in which
+  //internal distribution is the first step (may need this sorta approach if something
+  //complicated is going to happen?)
+  blobSequence = blobSequence.filter(
+    elm => {
+      let blobby = false;
+      if (elm instanceof Fluidblob) {
+        blobby = true;
+      }
+      return blobby;
+    }
+  );
+
+  if (outflowTerminal = this.terminals.start) {
+    blobSequence.reverse();
+  }
+  this.blobs = blobSequence.splice();
+  this.outflowSequence = outflowSequence;
+}
+
+Segment.prototype.distributeOutflows = function () {
+  //look at the node that includes this terminal
+  //if all other terminals on this node are receiving, all distribution can be handled here
+  //if some are receiving, and others are sources, then the behaviour is more complicated
+  //imagine a node with two sources, and two receivers. Which contributes to which, and in what order and proportions?
+
+}
+
+
 //traverse network, and build a map of all segments.
 let buildSegmentMap = function(network) {
   let segments = []
@@ -120,7 +183,7 @@ let addNewSegment = function(segmentMap, segment) {
 }
 
 
-let Blob = function (fluid, volume) {
+let Fluidblob = function (fluid, volume) {
   this.fluid = fluid;
   this.volume = volume;
 }
@@ -128,6 +191,6 @@ let Blob = function (fluid, volume) {
 
 let Fluid = function (name = 'Mystery Fluid', rho = 997, visc = 8.9e-4) {
   this.name = name;
-
-
+  this.rho = rho;
+  this.visc = visc;
 }
