@@ -127,20 +127,47 @@ Segment.prototype.distributeOutflows = function () {
 
 }
 
+let SegmentMap = function (network) {
+  this.segments = [];
+  if(network) {
+    this.network = network;
+    this.buildSegmentMap(network);
+  }
+}
 
-//traverse network, and build a map of all segments.
-let buildSegmentMap = function(network) {
-  let segments = []
+SegmentMap.prototype.addNewSegment = function(segment) {
+  if (!segment) {segment = new Segment();}
+  this.segments.push(segment);
+  segment.id = this.segments.length - 1;
+}
+
+SegmentMap.prototype.beginNewSegments = function(node) {
+  for (let i = 0, l = node.length; i < l; i++) {
+    let terminal = node[i];
+    if (!terminal.device.segment && Object.keys(terminal.device.terminals).length != 1) {
+      let s = new Segment();
+      this.addNewSegment(s);
+      s.addDevice(terminal.device, terminal);
+      if (s.terminals.end) {
+        let endNode = s.terminals.end.node;
+        this.beginNewSegments(endNode);
+      }
+    }
+  }
+}
+
+SegmentMap.prototype.buildSegmentMap = function(network) {
+  //traverse network, and build a map of all segments.
   let devices = network.devices;
   //look for a 'source'
   for (let d in devices) {
-    //is d a P_value?
-    if(devices[d] instanceof P_value || Object.keys(devices[d].terminals).length == 1) {
+    //is d a single-terminal device?
+    if(Object.keys(devices[d].terminals).length == 1) {
     //find the Node it is connected to
       let term = devices[d].terminals.value;
       let node = term.node;
       //for each other terminal in the node, attempt to start a new segment
-      beginNewSegments(segments, node);
+      this.beginNewSegments(node);
     }
   }
   //look for a node with more than 2 terminals, then pick one device from that node
@@ -149,38 +176,22 @@ let buildSegmentMap = function(network) {
     if(nodes[n].length > 2) {
       let node = nodes[n];
       //investigate further - pick a device and do the thing
-      beginNewSegments(segments, node);
+      this.beginNewSegments(node);
     }
   }
   //start on any node
   for (let n in nodes) {
     //investigate each device connected to the node. Is it already part of a Segment?
     let node = nodes[n];
-    beginNewSegments(segments, node);
-  }
-  console.log(segments);
-}
-
-let beginNewSegments = function(segmentMap, node) {
-  for (let i = 0, l = node.length; i < l; i++) {
-    let terminal = node[i];
-    if (!terminal.device.segment && !(terminal.device instanceof P_value) && Object.keys(terminal.device.terminals).length != 1) {
-      let s = new Segment();
-      addNewSegment(segmentMap, s);
-      s.addDevice(terminal.device, terminal);
-      if (s.terminals.end) {
-        let endNode = s.terminals.end.node;
-        beginNewSegments(segmentMap, endNode);
-      }
-    }
+    this.beginNewSegments(node);
   }
 }
 
-let addNewSegment = function(segmentMap, segment) {
-    if (!segment) {segment = new Segment();}
-    segmentMap.push(segment);
-    segment.id = segmentMap.length - 1;
+SegmentMap.prototype.distributeOutflows = function(node) {
+
 }
+
+
 
 
 let Fluidblob = function (fluid, volume) {

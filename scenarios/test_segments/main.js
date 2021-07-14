@@ -179,13 +179,13 @@ thisNet.create_link(pipe3a.terminals.out, pipe3b.terminals.in);
 thisNet.build_nodes();
 thisNet.build_matrix();
 
-buildSegmentMap(thisNet);
+let thisSegMap = new SegmentMap(thisNet);
 
 
 
 
 console.log(thisNet);
-
+console.log(thisSegMap);
 
 
 
