@@ -187,8 +187,63 @@ SegmentMap.prototype.buildSegmentMap = function(network) {
   }
 }
 
-SegmentMap.prototype.distributeOutflows = function(node) {
+SegmentMap.prototype.distributeOutflows = function(cycles = 6, time_step = 1/60) {
+  //this requires that all relevant Segments have had their outflowSequence determined
+  //now to work out where these flows end up!
 
+  //for each node, work out which terminals are outflows from Segments, and which are inflows to Segments
+  //also count any P_value terminals as Segments for this purpose.
+  let nodes = this.network.nodes;
+  for (let n in nodes) {
+    let node = nodes[n];
+    let segmentOutflows = [];
+    let segmentInflows = [];
+    for (let i = 0, l = node.length; i < l; i++) {
+      let term = node[i];
+      if (term.q < 0) {
+        segmentOutflows.push(term);
+      } else if (term.q > 0) {
+        segmentInflows.push(term);
+      }
+    }
+    //if there are more than one outflow terminals, combine their outflowSequences in the following way:
+    //order the terminals in descending order of outflow volume (not that important really)
+    //for n cycles, take 1/n of each outflowSequence and push to a new, combined outflowSequence
+    let combinedOutflowSequence = [];
+
+    if (segmentOutflows.length > 1) {
+      for (let i = 0; i < cycles; i++) {
+        for (let t in segmentOutflows) {
+          let term = segmentOutflows[t];
+          let vol = -1*term.q*time_step/cycles;
+          if(term.device.segment) {
+            let outflowSequence = term.device.segment.outflowSequence;
+            for (let j = 0, k = outflowSequence.length; j < k; j++) {
+              let thisBlob = outflowSequence[j];
+            }
+            for (let j = 0, k = outflowSequence.length; j < k; j++) {
+                //remove elements with blobs having zero volume
+            }
+          }
+        }
+      }
+    }
+
+    //if there are more than one inflow terminals, distribute the outflow to them in the following way:
+    //distribute each fluidblob in the sequence proportionately according to inflow volumes.
+    //this way, the sequence of blobs is maintained into each of the connected Segments.
+    if (segmentInflows.length > 1) {
+
+    }
+    //If the outflow terminal belongs to a P_value then it supplies q/time_step of whatever fluid it's set to provide
+    //If the inflow terminal is a P_value, no need to distribute blobs to it, they simply vanish from the simulation
+
+    //also have to consider what to do if the outflows exceed the volume of the Segment -so far have assumed that outflow volume << segment volume.
+    //is there an easyish way to work out where these flows end up?
+    //or just apply the outflow sequences as imagined, then check to see if the volumes stack up.
+    //if there is excess volume in elements,
+
+  }
 }
 
 
