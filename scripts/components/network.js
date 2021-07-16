@@ -214,7 +214,7 @@ Network.prototype.build_matrix = function() {
   }
 };
 
-Network.prototype.update = function() {
+Network.prototype.update = function(time_step = 1/60) {
   //solve a clone of the matrix
   let solved = clone_matrix(this.matrix);
   gje(solved);
@@ -256,7 +256,7 @@ Network.prototype.update = function() {
   //use this information to update each device. For instance, a relief valve may be triggered by a change in pressure, or
   //a pressure control unit will vary its resistance depending on the pressure drop across its terminals
   this.devices.forEach((dev) => {
-    if(dev.update) {dev.update();}
+    if(dev.update) {dev.update(time_step);}
   });
 
 
