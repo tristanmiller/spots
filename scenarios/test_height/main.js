@@ -220,33 +220,19 @@ let stop2 = document.getElementsByClassName('stop2')[0];
 console.log(stop1.style);
 
 
-let update = (time_step = 1/600) => {
-
-  let dt = time_step;
-
-
-  for (let d in thisNet.devices) {
-    let device = thisNet.devices[d];
-
-    if (device.volume) {
-      for (let t in device.terminals) {
-        let terminal = device.terminals[t];
-        if (Math.abs(terminal.q*dt > device.volume)) {
-            dt = device.volume/terminal.q;
-        }
-      }
-    }
-  }
-
-  let intervals = Math.ceil((1/60)/dt);
+let update = (time_step = 1/60) => {
+  let intervals = 20;
   dt = time_step/intervals;
-  console.log(intervals);
+  // console.log(intervals);
 
   for (let i = 0; i < intervals; i++) {
+
   // thisNet.build_nodes();
-  thisNet.build_matrix();
-  thisNet.update(dt);
+    thisNet.build_matrix();
+    thisNet.update(dt);
   }
+
+
   P_in_display.innerHTML = `${Math.round(pump.terminals.in.p/1000)} kPa`;
   if(Math.round(pump.terminals.in.p) < 100000) {
     P_in_display.style.color = `red`;

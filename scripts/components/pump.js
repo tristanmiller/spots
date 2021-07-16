@@ -18,7 +18,7 @@ let Pump = function (diam, length, d_impeller, rho = 997, g = 9.81) {
 
 Pump.prototype = Object.create(Pipe.prototype);
 
-Pump.prototype.update = function(rho = 997, g = 9.81) {
+Pump.prototype.update = function(time_step = 1/60, rho = 997, g = 9.81) {
   let q_prev = 0;
   if (this.terminals.in.history) {
     if (this.terminals.in.history[0]) {

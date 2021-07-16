@@ -175,23 +175,9 @@ let pointer_main = document.getElementById("pointer_needle_main");
 
 let update = (time_step = 1/60) => {
 
-  let dt = time_step;
 
 
-  for (let d in thisNet.devices) {
-    let device = thisNet.devices[d];
-
-    if (device.volume) {
-      for (let t in device.terminals) {
-        let terminal = device.terminals[t];
-        if (Math.abs(terminal.q*dt > device.volume)) {
-            dt = device.volume/terminal.q;
-        }
-      }
-    }
-  }
-
-  let intervals = Math.ceil((1/60)/dt);
+  let intervals = 10
   dt = time_step/intervals;
   console.log(intervals);
 
