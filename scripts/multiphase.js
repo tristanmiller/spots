@@ -125,6 +125,22 @@ Segment.prototype.handleInflowSequence = function () {
       //push the blobs in the inflowSequence to the segment's blob list.
       //that's what you would do if the 'start' terminal were an inflow terminal.
       //however, if the 'end' terminal is an inflow terminal, the blob list must be reversed, then added to.
+      let blobSequence = this.blobs.slice();
+      if (outflowTerminal == this.terminals.start) {
+        blobSequence.reverse();
+      }
+
+      for (let i = 0, l = inflowSequence.length; i < l; i++) {
+        let newBlob = Object.assign({}, inflowSequence[i]);
+        blobSequence.push(newBlob);
+      }
+
+      if (outflowTerminal == this.terminals.start) {
+        blobSequence.reverse();
+      }
+
+      this.blobs = blobSequence.slice();
+      this.inflowSequence = [];
 
     }
   }
