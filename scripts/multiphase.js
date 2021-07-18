@@ -119,12 +119,15 @@ Segment.prototype.buildOutflowSequence = function(time_step = 1/60) {
   this.outflowSequence = outflowSequence;
 }
 
-Segment.prototype.distributeOutflows = function () {
-  //look at the node that includes this terminal
-  //if all other terminals on this node are receiving, all distribution can be handled here
-  //if some are receiving, and others are sources, then the behaviour is more complicated
-  //imagine a node with two sources, and two receivers. Which contributes to which, and in what order and proportions?
+Segment.prototype.handleInflowSequence = function () {
+  if (this.inflowSequence) {
+    if (this.inflowSequence.length > 0) {
+      //push the blobs in the inflowSequence to the segment's blob list.
+      //that's what you would do if the 'start' terminal were an inflow terminal.
+      //however, if the 'end' terminal is an inflow terminal, the blob list must be reversed, then added to.
 
+    }
+  }
 }
 
 let SegmentMap = function (network) {
@@ -211,47 +214,81 @@ SegmentMap.prototype.distributeOutflows = function(cycles = 6, time_step = 1/60)
     //for n cycles, take 1/n of each outflowSequence and push to a new, combined outflowSequence
     let combinedOutflowSequence = [];
 
-    if (segmentOutflows.length > 1) {
-      for (let i = 0; i < cycles; i++) {
-        for (let t = 0; t < segmentOutflows.length; t++) {
-          let term = segmentOutflows[t];
-          let vol = -1*term.q*time_step/cycles;
-          if(term.device.segment) {
-            let outflowSequence = term.device.segment.outflowSequence;
-            for (let j = 0, k = outflowSequence.length; j < k; j++) {
-              let thisBlob = outflowSequence[j];
-              let newBlob = Object.assign({}, thisBlob);
-              //how much volume is in this blob? Is it less than 1/n of the outflow volume?
-              if (thisBlob.volume > vol) {
-                thisBlob.volume -= vol;
-              }
-              //if less, then reduce thisblob by this amount, and push a new blob with the same params and this volume to the combinedOutflowSequence
-              //if more, the entire blob is copied to the combinedOutflowSequence. Then the remaining bit of outflow volume this cycle is carved off the next blob...
+    for (let i = 0; i < cycles; i++) {
+      for (let t = 0; t < segmentOutflows.length; t++) {
+        let term = segmentOutflows[t];
+        let vol = -1*term.q*time_step/cycles;
+        if(term.device.segment) {
+          let outflowSequence = term.device.segment.outflowSequence;
+          for (let j = 0, m = outflowSequence.length; m < k; j++) {
+            let thisBlob = outflowSequence[j];
+            let newBlob = Object.assign({}, thisBlob);
+            //how much volume is in this blob? Is it less than 1/n of the outflow volume?
+            if (newBlob.volume >= vol) {
+              newBlob.volume = vol;
+              thisBlob.volume -= vol;
+            } else {
+              delete outflowSequence[j];
             }
-            for (let j = 0, k = outflowSequence.length; j < k; j++) {
-                //remove elements with blobs having zero volume
+            combinedOutflowSequence.push(newBlob);
+            vol -= newBlob.volume;
+            if(vol == 0) {
+              break;
             }
           }
+          //tidy up outflowSequence by removing deleted elements
+          outflowSequence = outflowSequence.filter(blob => blob instanceof Fluidblob);
+        } else if (term.device instance of P_value) {
+          //If the outflow terminal belongs to a P_value then it supplies q/time_step of whatever fluid it's set to provide
+          let newBlob = new Fluidblob(term.device.fluid, vol);
+          combinedOutflowSequence.push(newBlob);
         }
       }
     }
 
-    //if there are more than one inflow terminals, distribute the outflow to them in the following way:
-    //distribute each fluidblob in the sequence proportionately according to inflow volumes.
-    //this way, the sequence of blobs is maintained into each of the connected Segments.
-    if (segmentInflows.length > 1) {
-
+    let vol = 0
+    for (let i = 0, l = combinedOutflowSequence.length; i < l; i++) {
+      let thisBlob = combinedOutflowSequence[i];
+      vol += thisBlob.volume;
     }
-    //If the outflow terminal belongs to a P_value then it supplies q/time_step of whatever fluid it's set to provide
-    //If the inflow terminal is a P_value, no need to distribute blobs to it, they simply vanish from the simulation
 
-    //also have to consider what to do if the outflows exceed the volume of the Segment -so far have assumed that outflow volume << segment volume.
-    //is there an easyish way to work out where these flows end up?
-    //or just apply the outflow sequences as imagined, then check to see if the volumes stack up.
-    //if there is excess volume in elements,
+    for (let i = 0, l = combinedOutflowSequence.length; i < l; i++) {
+      let thisBlob = combinedOutflowSequence[i];
+      for (let t = 0; t < segmentInflows.length; t++) {
+        let term = segmentInflows[t];
+        let proportion = term.q/vol;
+
+        //TODO: this all assumes the segment only has one inflow terminal
+        //need some way of handling multi-terminal devices that are either treated as their own segment,
+        //or have their own method of handling their potential multiple inflows/outflows.
+        if (!term.device instanceof P_value) {
+          if (!term.device.segment.inflowSequence) {
+            term.device.segment.inflowSequence = [];
+          }
+          let inflowSequence = term.device.segment.inflowSequence;
+          let newBlob = Object.assign({}, thisBlob);
+          newBlob.volume *= term.q*time_step/vol;
+          inflowSequence.push(newBlob);
+        }
+      }
+    }
+      //if there are more than one inflow terminals, distribute the outflow to them in the following way:
+      //distribute each fluidblob in the sequence proportionately according to inflow volumes.
+      //this way, the sequence of blobs is maintained into each of the connected Segments.
+
+
+
+      //If the inflow terminal is a P_value, no need to distribute blobs to it, they simply vanish from the simulation
+
+      //all this assumes that the outflows < the segment volumes. This can be assured with a suitable timestep for a given scenario, or
+      //by applying a dynamic timestep that scales according to the the severity of the overflows.
+
 
   }
+
+
 }
+
 
 
 
