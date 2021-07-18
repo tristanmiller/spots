@@ -3,7 +3,7 @@ let Pipe = function(diam, length, rho = 997, p_fill = 100000) {
   this.area = Math.PI*Math.pow(0.5*diam, 2);
   this.length = length;
   this.volume = this.length*this.area;
-  this.mass = this.volume*rho;
+  this.mass = 0*this.volume*rho;
   this.res = this.poiseuille();
   this.res_default = this.res;
   this.dq = 0;

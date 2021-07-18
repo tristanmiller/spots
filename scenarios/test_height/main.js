@@ -7,31 +7,7 @@ let map_p5 = function (value, oldMin, oldMax, newMin, newMax) {
 
 
 
-let tank = {
-  terminals: {
-    in: {p: 0, q: 0, height: 0, idx:0},
-    out: {p: 0, q: 0, height: 0, idx: 1},
-  },
 
-  height: 1.5,
-  cap: 3000,
-  stored: 3000,
-
-  states: {
-    default:[
-      [0, 0, -1, 1, 1.5*997*9.81]
-    ]
-  },
-
-  update: function(time_step = 1/60) {
-    let outflow = this.terminals.out.q*time_step;
-    this.stored += outflow;
-    this.height = this.stored/2000;
-    this.states.default[0] = [0,0,-1,1, this.height*997*9.81];
-    // console.log(this.stored);
-  }
-
-}
 
 let Tank2 = function () {
   this.terminals = {
@@ -220,8 +196,13 @@ let stop2 = document.getElementsByClassName('stop2')[0];
 console.log(stop1.style);
 
 
+let last_time = new Date();
+
 let update = (time_step = 1/60) => {
-  let intervals = 20;
+  let this_time = new Date();
+  // console.log (1000/(this_time - last_time));
+  last_time = this_time;
+  let intervals = 10;
   dt = time_step/intervals;
   // console.log(intervals);
 
