@@ -213,13 +213,20 @@ SegmentMap.prototype.distributeOutflows = function(cycles = 6, time_step = 1/60)
 
     if (segmentOutflows.length > 1) {
       for (let i = 0; i < cycles; i++) {
-        for (let t in segmentOutflows) {
+        for (let t = 0; t < segmentOutflows.length; t++) {
           let term = segmentOutflows[t];
           let vol = -1*term.q*time_step/cycles;
           if(term.device.segment) {
             let outflowSequence = term.device.segment.outflowSequence;
             for (let j = 0, k = outflowSequence.length; j < k; j++) {
               let thisBlob = outflowSequence[j];
+              let newBlob = Object.assign({}, thisBlob);
+              //how much volume is in this blob? Is it less than 1/n of the outflow volume?
+              if (thisBlob.volume > vol) {
+                thisBlob.volume -= vol;
+              }
+              //if less, then reduce thisblob by this amount, and push a new blob with the same params and this volume to the combinedOutflowSequence
+              //if more, the entire blob is copied to the combinedOutflowSequence. Then the remaining bit of outflow volume this cycle is carved off the next blob...
             }
             for (let j = 0, k = outflowSequence.length; j < k; j++) {
                 //remove elements with blobs having zero volume
